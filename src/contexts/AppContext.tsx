@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { toast } from 'react-toastify';
 import { 
   Customer, 
+  CustomerNumber,
   Plan, 
   CustomerPlan, 
   Sale, 
@@ -20,6 +21,7 @@ interface Payment {
 
 interface AppContextType {
   customers: Customer[];
+  customerNumbers: CustomerNumber[];
   plans: Plan[];
   customerPlans: CustomerPlan[];
   sales: Sale[];
@@ -28,6 +30,8 @@ interface AppContextType {
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate'>) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  addCustomerNumber: (number: Omit<CustomerNumber, 'id'>) => Promise<void>;
+  deleteCustomerNumber: (id: string) => Promise<void>;
   addSale: (sale: Omit<Sale, 'id' | 'amountPaid' | 'status'>) => Promise<Sale>;
   updateSale: (sale: Sale) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
@@ -41,6 +45,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>([]);
   const [plans, setPlans] = useState<Plan[]>(initialPlans);
   const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(initialCustomerPlans);
   const [sales, setSales] = useState<Sale[]>(initialSales);
@@ -84,6 +89,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) {
       console.error('Error deleting customer:', error);
       toast.error('Failed to delete customer');
+      throw error;
+    }
+  };
+
+  // Add a new customer number
+  const addCustomerNumber = async (number: Omit<CustomerNumber, 'id'>) => {
+    try {
+      const newNumber: CustomerNumber = {
+        ...number,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      setCustomerNumbers(prev => [...prev, newNumber]);
+      toast.success('Phone number added successfully');
+    } catch (error) {
+      console.error('Error adding phone number:', error);
+      toast.error('Failed to add phone number');
+      throw error;
+    }
+  };
+
+  // Delete a customer number
+  const deleteCustomerNumber = async (id: string) => {
+    try {
+      setCustomerNumbers(prev => prev.filter(n => n.id !== id));
+      toast.success('Phone number deleted successfully');
+    } catch (error) {
+      console.error('Error deleting phone number:', error);
+      toast.error('Failed to delete phone number');
       throw error;
     }
   };
@@ -243,6 +276,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{
       customers,
+      customerNumbers,
       plans,
       customerPlans,
       sales,
@@ -251,6 +285,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addCustomer,
       updateCustomer,
       deleteCustomer,
+      addCustomerNumber,
+      deleteCustomerNumber,
       addSale,
       updateSale,
       deleteSale,

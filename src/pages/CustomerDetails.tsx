@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { format } from 'date-fns';
-import { User, Phone, Mail, MapPin, Calendar, Package, FileText, Trash2, Edit2 } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Calendar, Package, FileText, Trash2, Edit2, Plus } from 'lucide-react';
+import CustomerNumberForm from '../components/customers/CustomerNumberForm';
 
 const CustomerDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, customerPlans, plans, sales, invoices, deleteCustomer } = useApp();
+  const { customers, customerNumbers, customerPlans, plans, sales, invoices, deleteCustomer, deleteCustomerNumber } = useApp();
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddingNumber, setIsAddingNumber] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -22,6 +24,7 @@ const CustomerDetails: React.FC = () => {
   const customerSales = sales.filter(s => s.customerId === id);
   const customerInvoices = invoices.filter(i => i.customerId === id);
   const activePlans = customerPlans.filter(cp => cp.customerId === id && cp.status === 'active');
+  const numbers = customerNumbers.filter(n => n.customerId === id);
   
   const formatDate = (date: Date) => format(date, 'MMM dd, yyyy');
   const formatCurrency = (amount: number) => 
@@ -41,6 +44,12 @@ const CustomerDetails: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
       await deleteCustomer(customer.id);
       navigate('/customers');
+    }
+  };
+
+  const handleDeleteNumber = async (numberId: string) => {
+    if (window.confirm('Are you sure you want to delete this phone number?')) {
+      await deleteCustomerNumber(numberId);
     }
   };
 
@@ -165,6 +174,56 @@ const CustomerDetails: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      </div>
+      
+      {/* Family Numbers Section */}
+      <div className="bg-white rounded-xl shadow-sm">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Family Numbers</h3>
+            <button
+              onClick={() => setIsAddingNumber(true)}
+              className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              <Plus size={16} className="mr-1" />
+              Add Number
+            </button>
+          </div>
+
+          {isAddingNumber ? (
+            <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+              <CustomerNumberForm
+                customerId={customer.id}
+                onSuccess={() => setIsAddingNumber(false)}
+                onCancel={() => setIsAddingNumber(false)}
+              />
+            </div>
+          ) : null}
+
+          <div className="space-y-4">
+            {numbers.map(number => (
+              <div key={number.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <h4 className="font-medium text-gray-900">{number.name}</h4>
+                  <p className="text-sm text-gray-500">{number.phoneNumber}</p>
+                  <p className="text-sm text-gray-500">{number.carrier}</p>
+                </div>
+                <button
+                  onClick={() => handleDeleteNumber(number.id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+
+            {numbers.length === 0 && (
+              <p className="text-center text-gray-500 py-4">
+                No additional numbers added yet
+              </p>
+            )}
+          </div>
         </div>
       </div>
       

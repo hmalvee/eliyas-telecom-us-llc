@@ -7,6 +7,15 @@ export interface Customer {
   joinDate: Date;
 }
 
+export interface CustomerNumber {
+  id: string;
+  customerId: string;
+  name: string;
+  carrier: string;
+  customCarrier?: string;
+  phoneNumber: string;
+}
+
 export interface Plan {
   id: string;
   name: string;
