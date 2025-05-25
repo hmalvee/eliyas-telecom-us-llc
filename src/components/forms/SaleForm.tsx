@@ -120,7 +120,7 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
   // Calculate due amount
   const calculateDueAmount = () => {
     const totalAmount = calculateTotalAmount();
-    return paymentStatus === 'partial' ? totalAmount - paymentAmount : 0;
+    return totalAmount - (paymentStatus === 'partial' ? paymentAmount : 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -532,7 +532,15 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700">Payment Status</label>
                 <select
                   value={paymentStatus}
-                  onChange={(e) => setPaymentStatus(e.target.value as 'paid' | 'partial' | 'unpaid')}
+                  onChange={(e) => {
+                    const newStatus = e.target.value as 'paid' | 'partial' | 'unpaid';
+                    setPaymentStatus(newStatus);
+                    if (newStatus === 'paid') {
+                      setPaymentAmount(calculateTotalAmount());
+                    } else if (newStatus === 'unpaid') {
+                      setPaymentAmount(0);
+                    }
+                  }}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="paid">Paid</option>
