@@ -7,38 +7,96 @@ interface SaleFormProps {
   onSuccess?: () => void;
 }
 
+interface TelecomFormData {
+  customerId: string;
+  simCarrier: string;
+  rechargeNumber: string;
+  rechargeAmount: number;
+  paymentAmount: number;
+  dueAmount: number;
+  status: string;
+  paymentMethod: string;
+  notes: string;
+}
+
+interface TravelFormData {
+  customerId: string;
+  route: string;
+  ourFare: number;
+  customerFare: number;
+  profit: number;
+  status: string;
+  paymentAmount: number;
+  dueAmount: number;
+  paymentMethod: string;
+  notes: string;
+}
+
 const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
-  const { customers, plans, addSale, generateInvoice } = useApp();
-  const [formData, setFormData] = useState({
+  const { customers, addSale } = useApp();
+  const [business, setBusiness] = useState('telecom');
+  const [isPartialPayment, setIsPartialPayment] = useState(false);
+
+  const [telecomData, setTelecomData] = useState<TelecomFormData>({
     customerId: '',
-    planId: '',
+    simCarrier: '',
+    rechargeNumber: '',
+    rechargeAmount: 0,
+    paymentAmount: 0,
+    dueAmount: 0,
+    status: 'pending',
     paymentMethod: 'card',
-    notes: '',
-    business: 'telecom',
-    status: 'pending'
+    notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [travelData, setTravelData] = useState<TravelFormData>({
+    customerId: '',
+    route: '',
+    ourFare: 0,
+    customerFare: 0,
+    profit: 0,
+    status: 'pending',
+    paymentAmount: 0,
+    dueAmount: 0,
+    paymentMethod: 'card',
+    notes: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedPlan = plans.find(p => p.id === formData.planId) as Plan;
-    const sale = addSale({
-      customerId: formData.customerId,
-      planId: formData.planId,
-      amount: selectedPlan.price,
-      date: new Date(),
-      paymentMethod: formData.paymentMethod as 'cash' | 'card' | 'online',
-      notes: formData.notes,
-      business: formData.business as 'telecom' | 'travel',
-      status: formData.status as 'paid' | 'partial' | 'unpaid' | 'not-delivered' | 'pending'
-    });
     
-    generateInvoice(sale);
-    
+    if (business === 'telecom') {
+      const sale = await addSale({
+        customerId: telecomData.customerId,
+        amount: telecomData.rechargeAmount,
+        date: new Date(),
+        paymentMethod: telecomData.paymentMethod as 'cash' | 'card' | 'online',
+        notes: `Carrier: ${telecomData.simCarrier}\nNumber: ${telecomData.rechargeNumber}\n${telecomData.notes}`,
+        business: 'telecom',
+        status: isPartialPayment ? 'partial' : telecomData.paymentAmount >= telecomData.rechargeAmount ? 'paid' : 'unpaid'
+      });
+    } else {
+      const sale = await addSale({
+        customerId: travelData.customerId,
+        amount: travelData.customerFare,
+        date: new Date(),
+        paymentMethod: travelData.paymentMethod as 'cash' | 'card' | 'online',
+        notes: `Route: ${travelData.route}\nOur Fare: $${travelData.ourFare}\nProfit: $${travelData.profit}\n${travelData.notes}`,
+        business: 'travel',
+        status: isPartialPayment ? 'partial' : travelData.paymentAmount >= travelData.customerFare ? 'paid' : 'unpaid'
+      });
+    }
+
     if (onSuccess) {
       onSuccess();
     }
     navigate('/sales');
+  };
+
+  const calculateProfit = (ourFare: number, customerFare: number) => {
+    const profit = customerFare - ourFare;
+    setTravelData(prev => ({ ...prev, profit }));
   };
 
   return (
@@ -51,8 +109,8 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
           id="business"
           required
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={formData.business}
-          onChange={(e) => setFormData({ ...formData, business: e.target.value })}
+          value={business}
+          onChange={(e) => setBusiness(e.target.value)}
         >
           <option value="telecom">Eliyas Telecom</option>
           <option value="travel">US Tours And Travels</option>
@@ -67,8 +125,14 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
           id="customer"
           required
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={formData.customerId}
-          onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+          value={business === 'telecom' ? telecomData.customerId : travelData.customerId}
+          onChange={(e) => {
+            if (business === 'telecom') {
+              setTelecomData(prev => ({ ...prev, customerId: e.target.value }));
+            } else {
+              setTravelData(prev => ({ ...prev, customerId: e.target.value }));
+            }
+          }}
         >
           <option value="">Select a customer</option>
           {customers.map(customer => (
@@ -79,43 +143,200 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
         </select>
       </div>
 
-      <div>
-        <label htmlFor="plan" className="block text-sm font-medium text-gray-700">
-          Plan
-        </label>
-        <select
-          id="plan"
-          required
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={formData.planId}
-          onChange={(e) => setFormData({ ...formData, planId: e.target.value })}
-        >
-          <option value="">Select a plan</option>
-          {plans.map(plan => (
-            <option key={plan.id} value={plan.id}>
-              {plan.name} - ${plan.price}
-            </option>
-          ))}
-        </select>
-      </div>
+      {business === 'telecom' ? (
+        <>
+          <div>
+            <label htmlFor="simCarrier" className="block text-sm font-medium text-gray-700">
+              SIM Carrier
+            </label>
+            <input
+              type="text"
+              id="simCarrier"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={telecomData.simCarrier}
+              onChange={(e) => setTelecomData(prev => ({ ...prev, simCarrier: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="rechargeNumber" className="block text-sm font-medium text-gray-700">
+              Number to Recharge
+            </label>
+            <input
+              type="text"
+              id="rechargeNumber"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={telecomData.rechargeNumber}
+              onChange={(e) => setTelecomData(prev => ({ ...prev, rechargeNumber: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="rechargeAmount" className="block text-sm font-medium text-gray-700">
+              Recharge Amount
+            </label>
+            <input
+              type="number"
+              id="rechargeAmount"
+              required
+              min="0"
+              step="0.01"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={telecomData.rechargeAmount}
+              onChange={(e) => setTelecomData(prev => ({ ...prev, rechargeAmount: parseFloat(e.target.value) }))}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <label htmlFor="route" className="block text-sm font-medium text-gray-700">
+              Route
+            </label>
+            <input
+              type="text"
+              id="route"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={travelData.route}
+              onChange={(e) => setTravelData(prev => ({ ...prev, route: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="ourFare" className="block text-sm font-medium text-gray-700">
+              Our Fare
+            </label>
+            <input
+              type="number"
+              id="ourFare"
+              required
+              min="0"
+              step="0.01"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={travelData.ourFare}
+              onChange={(e) => {
+                const ourFare = parseFloat(e.target.value);
+                setTravelData(prev => ({ ...prev, ourFare }));
+                calculateProfit(ourFare, travelData.customerFare);
+              }}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="customerFare" className="block text-sm font-medium text-gray-700">
+              Customer Fare
+            </label>
+            <input
+              type="number"
+              id="customerFare"
+              required
+              min="0"
+              step="0.01"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={travelData.customerFare}
+              onChange={(e) => {
+                const customerFare = parseFloat(e.target.value);
+                setTravelData(prev => ({ ...prev, customerFare }));
+                calculateProfit(travelData.ourFare, customerFare);
+              }}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="profit" className="block text-sm font-medium text-gray-700">
+              Profit
+            </label>
+            <input
+              type="number"
+              id="profit"
+              readOnly
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50 shadow-sm"
+              value={travelData.profit}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="travelStatus" className="block text-sm font-medium text-gray-700">
+              Airline Ticketing Status
+            </label>
+            <select
+              id="travelStatus"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={travelData.status}
+              onChange={(e) => setTravelData(prev => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="issued">Ticket Issued</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </>
+      )}
 
       <div>
-        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-          Status
-        </label>
-        <select
-          id="status"
-          required
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-        >
-          <option value="pending">Pending</option>
-          <option value="not-delivered">Not Delivered</option>
-          <option value="paid">Paid</option>
-          <option value="partial">Partial</option>
-          <option value="unpaid">Unpaid</option>
-        </select>
+        <div className="flex items-center mb-4">
+          <input
+            type="checkbox"
+            id="partialPayment"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            checked={isPartialPayment}
+            onChange={(e) => setIsPartialPayment(e.target.checked)}
+          />
+          <label htmlFor="partialPayment" className="ml-2 block text-sm text-gray-900">
+            Partial Payment
+          </label>
+        </div>
+
+        <div>
+          <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700">
+            Payment Amount
+          </label>
+          <input
+            type="number"
+            id="paymentAmount"
+            required
+            min="0"
+            step="0.01"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={business === 'telecom' ? telecomData.paymentAmount : travelData.paymentAmount}
+            onChange={(e) => {
+              const amount = parseFloat(e.target.value);
+              if (business === 'telecom') {
+                setTelecomData(prev => ({
+                  ...prev,
+                  paymentAmount: amount,
+                  dueAmount: telecomData.rechargeAmount - amount
+                }));
+              } else {
+                setTravelData(prev => ({
+                  ...prev,
+                  paymentAmount: amount,
+                  dueAmount: travelData.customerFare - amount
+                }));
+              }
+            }}
+          />
+        </div>
+
+        {isPartialPayment && (
+          <div className="mt-4">
+            <label htmlFor="dueAmount" className="block text-sm font-medium text-gray-700">
+              Due Amount
+            </label>
+            <input
+              type="number"
+              id="dueAmount"
+              readOnly
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50 shadow-sm"
+              value={business === 'telecom' ? telecomData.dueAmount : travelData.dueAmount}
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -126,8 +347,14 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
           id="paymentMethod"
           required
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={formData.paymentMethod}
-          onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+          value={business === 'telecom' ? telecomData.paymentMethod : travelData.paymentMethod}
+          onChange={(e) => {
+            if (business === 'telecom') {
+              setTelecomData(prev => ({ ...prev, paymentMethod: e.target.value }));
+            } else {
+              setTravelData(prev => ({ ...prev, paymentMethod: e.target.value }));
+            }
+          }}
         >
           <option value="card">Card</option>
           <option value="cash">Cash</option>
@@ -143,8 +370,14 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
           id="notes"
           rows={3}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          value={business === 'telecom' ? telecomData.notes : travelData.notes}
+          onChange={(e) => {
+            if (business === 'telecom') {
+              setTelecomData(prev => ({ ...prev, notes: e.target.value }));
+            } else {
+              setTravelData(prev => ({ ...prev, notes: e.target.value }));
+            }
+          }}
         />
       </div>
 
@@ -152,13 +385,13 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
         <button
           type="button"
           onClick={() => navigate('/sales')}
-          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Create Sale
         </button>
