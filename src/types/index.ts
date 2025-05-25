@@ -1,3 +1,6 @@
+import { Settings } from './settings';
+export * from './settings';
+
 export interface Customer {
   id: string;
   name: string;
