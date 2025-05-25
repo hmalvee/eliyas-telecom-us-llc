@@ -326,6 +326,25 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Phone Number</label>
                 <div className="mt-1 space-y-2">
+                  {/* Main Profile Number */}
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="phoneNumber"
+                      value="main"
+                      checked={!selectedNumber && !useOtherNumber}
+                      onChange={() => {
+                        setSelectedNumber(null);
+                        setUseOtherNumber(false);
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>
+                      Main Profile - {selectedCustomer.phone}
+                    </span>
+                  </label>
+
+                  {/* Family Numbers */}
                   {customerNumbers.map(number => (
                     <label key={number.id} className="flex items-center space-x-3">
                       <input
@@ -344,6 +363,8 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
                       </span>
                     </label>
                   ))}
+
+                  {/* Other Number Option */}
                   <label className="flex items-center space-x-3">
                     <input
                       type="radio"
@@ -513,6 +534,33 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
             </>
           )}
 
+          {/* Others Fields */}
+          {businessType === 'telecom_other' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  value={paymentData.notes}
+                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
+                  rows={3}
+                  placeholder="Enter details about the sale..."
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Amount</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paymentData.amount}
+                  onChange={(e) => setPaymentData({ ...paymentData, amount: parseFloat(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
+
           {/* Travel Fields */}
           {(businessType === 'travel_domestic' || businessType === 'travel_international') && (
             <>
@@ -639,6 +687,67 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
                   value={visaData.customerCost}
                   onChange={(e) => setVisaData({ ...visaData, customerCost: parseFloat(e.target.value) })}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Custom Package Fields */}
+          {businessType === 'travel_custom' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Package Description</label>
+                <textarea
+                  value={paymentData.notes}
+                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
+                  rows={4}
+                  placeholder="Enter package details, inclusions, special requirements..."
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Our Cost</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={travelData.ourFare}
+                  onChange={(e) => {
+                    const ourFare = parseFloat(e.target.value);
+                    setTravelData({
+                      ...travelData,
+                      ourFare,
+                      profit: travelData.customerFare - ourFare
+                    });
+                  }}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Customer Cost</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={travelData.customerFare}
+                  onChange={(e) => {
+                    const customerFare = parseFloat(e.target.value);
+                    setTravelData({
+                      ...travelData,
+                      customerFare,
+                      profit: customerFare - travelData.ourFare
+                    });
+                  }}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Profit</label>
+                <input
+                  type="number"
+                  readOnly
+                  value={travelData.profit}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50"
                 />
               </div>
             </>
