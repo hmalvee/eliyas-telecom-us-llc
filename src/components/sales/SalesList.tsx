@@ -6,22 +6,25 @@ import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2 } from 'lucide-
 const SalesList: React.FC = () => {
   const { sales, customers, plans, deleteSale } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showPartialPayments, setShowPartialPayments] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedBusiness, setSelectedBusiness] = useState('all');
   
-  // Filter sales based on search query and payment status
+  // Filter sales based on search query, status and business
   const filteredSales = sales.filter(sale => {
     const customer = customers.find(c => c.id === sale.customerId);
     const plan = plans.find(p => p.id === sale.planId);
     
     if (!customer || !plan) return false;
     
-    if (showPartialPayments && sale.status !== 'partial') return false;
-    
-    return (
+    const matchesSearch = 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sale.amount.toString().includes(searchQuery)
-    );
+      sale.amount.toString().includes(searchQuery);
+      
+    const matchesStatus = selectedStatus === 'all' || sale.status === selectedStatus;
+    const matchesBusiness = selectedBusiness === 'all' || sale.business === selectedBusiness;
+    
+    return matchesSearch && matchesStatus && matchesBusiness;
   });
   
   // Sort sales by date (most recent first)
@@ -47,16 +50,18 @@ const SalesList: React.FC = () => {
     }).format(amount);
   };
   
-  // Payment status badge
-  const getStatusBadge = (sale: Sale) => {
+  // Status badge
+  const getStatusBadge = (status: string) => {
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
-      'unpaid': 'bg-red-100 text-red-800'
+      'unpaid': 'bg-red-100 text-red-800',
+      'not-delivered': 'bg-purple-100 text-purple-800',
+      'pending': 'bg-blue-100 text-blue-800'
     };
     
-    const colorClass = badgeColors[sale.status] ?? 'bg-gray-100 text-gray-800';
-    const displayStatus = sale.status?.charAt(0).toUpperCase() + (sale.status?.slice(1) ?? '') || 'Unknown';
+    const colorClass = badgeColors[status as keyof typeof badgeColors] ?? 'bg-gray-100 text-gray-800';
+    const displayStatus = status.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
@@ -102,17 +107,29 @@ const SalesList: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-4">
-            <button
-              onClick={() => setShowPartialPayments(!showPartialPayments)}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                showPartialPayments
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
+          <div className="mt-4 flex gap-4">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              Show Partial Payments Only
-            </button>
+              <option value="all">All Status</option>
+              <option value="not-delivered">Not Delivered</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="partial">Partial</option>
+              <option value="unpaid">Unpaid</option>
+            </select>
+
+            <select
+              value={selectedBusiness}
+              onChange={(e) => setSelectedBusiness(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="all">All Business</option>
+              <option value="telecom">Eliyas Telecom</option>
+              <option value="travel">US Tours And Travels</option>
+            </select>
           </div>
         </div>
         
@@ -127,13 +144,13 @@ const SalesList: React.FC = () => {
                   Customer
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Business
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Plan
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total Amount
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Paid Amount
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -166,17 +183,17 @@ const SalesList: React.FC = () => {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {sale.business === 'telecom' ? 'Eliyas Telecom' : 'US Tours And Travels'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{plan?.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatCurrency(sale.amount)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(sale.amountPaid)}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(sale)}
+                      {getStatusBadge(sale.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center space-x-3">
@@ -209,9 +226,7 @@ const SalesList: React.FC = () => {
                   <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                     {searchQuery 
                       ? `No sales found matching "${searchQuery}"`
-                      : showPartialPayments
-                        ? 'No partial payments found'
-                        : 'No sales recorded yet.'}
+                      : 'No sales recorded yet.'}
                   </td>
                 </tr>
               )}

@@ -14,7 +14,9 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     customerId: '',
     planId: '',
     paymentMethod: 'card',
-    notes: ''
+    notes: '',
+    business: 'telecom',
+    status: 'pending'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,7 +28,9 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
       amount: selectedPlan.price,
       date: new Date(),
       paymentMethod: formData.paymentMethod as 'cash' | 'card' | 'online',
-      notes: formData.notes
+      notes: formData.notes,
+      business: formData.business as 'telecom' | 'travel',
+      status: formData.status as 'paid' | 'partial' | 'unpaid' | 'not-delivered' | 'pending'
     });
     
     generateInvoice(sale);
@@ -39,6 +43,22 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <label htmlFor="business" className="block text-sm font-medium text-gray-700">
+          Business
+        </label>
+        <select
+          id="business"
+          required
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          value={formData.business}
+          onChange={(e) => setFormData({ ...formData, business: e.target.value })}
+        >
+          <option value="telecom">Eliyas Telecom</option>
+          <option value="travel">US Tours And Travels</option>
+        </select>
+      </div>
+
       <div>
         <label htmlFor="customer" className="block text-sm font-medium text-gray-700">
           Customer
@@ -76,6 +96,25 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
               {plan.name} - ${plan.price}
             </option>
           ))}
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+          Status
+        </label>
+        <select
+          id="status"
+          required
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          value={formData.status}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+        >
+          <option value="pending">Pending</option>
+          <option value="not-delivered">Not Delivered</option>
+          <option value="paid">Paid</option>
+          <option value="partial">Partial</option>
+          <option value="unpaid">Unpaid</option>
         </select>
       </div>
 

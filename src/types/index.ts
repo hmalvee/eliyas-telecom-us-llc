@@ -45,8 +45,9 @@ export interface Sale {
   amountPaid: number;
   date: Date;
   paymentMethod: 'cash' | 'card' | 'online';
-  status: 'paid' | 'partial' | 'unpaid';
+  status: 'paid' | 'partial' | 'unpaid' | 'not-delivered' | 'pending';
   notes: string;
+  business: 'telecom' | 'travel';
 }
 
 export interface Invoice {
