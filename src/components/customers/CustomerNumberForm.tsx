@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { CustomerNumber } from '../../types';
 
 interface CustomerNumberFormProps {
   customerId: string;
+  number?: CustomerNumber;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -21,10 +23,11 @@ const CARRIERS = [
 
 const CustomerNumberForm: React.FC<CustomerNumberFormProps> = ({
   customerId,
+  number,
   onSuccess,
   onCancel
 }) => {
-  const { addCustomerNumber } = useApp();
+  const { addCustomerNumber, updateCustomerNumber } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     carrier: '',
@@ -32,21 +35,43 @@ const CustomerNumberForm: React.FC<CustomerNumberFormProps> = ({
     phoneNumber: ''
   });
 
+  useEffect(() => {
+    if (number) {
+      setFormData({
+        name: number.name,
+        carrier: number.customCarrier ? 'Others' : number.carrier,
+        customCarrier: number.customCarrier || '',
+        phoneNumber: number.phoneNumber
+      });
+    }
+  }, [number]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addCustomerNumber({
-        customerId,
-        name: formData.name,
-        carrier: formData.carrier === 'Others' ? formData.customCarrier : formData.carrier,
-        customCarrier: formData.carrier === 'Others' ? formData.customCarrier : undefined,
-        phoneNumber: formData.phoneNumber
-      });
+      if (number) {
+        await updateCustomerNumber({
+          id: number.id,
+          customerId,
+          name: formData.name,
+          carrier: formData.carrier === 'Others' ? formData.customCarrier : formData.carrier,
+          customCarrier: formData.carrier === 'Others' ? formData.customCarrier : undefined,
+          phoneNumber: formData.phoneNumber
+        });
+      } else {
+        await addCustomerNumber({
+          customerId,
+          name: formData.name,
+          carrier: formData.carrier === 'Others' ? formData.customCarrier : formData.carrier,
+          customCarrier: formData.carrier === 'Others' ? formData.customCarrier : undefined,
+          phoneNumber: formData.phoneNumber
+        });
+      }
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      console.error('Error adding number:', error);
+      console.error('Error saving number:', error);
     }
   };
 
@@ -132,7 +157,7 @@ const CustomerNumberForm: React.FC<CustomerNumberFormProps> = ({
           type="submit"
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          Add Number
+          {number ? 'Save Changes' : 'Add Number'}
         </button>
       </div>
     </form>

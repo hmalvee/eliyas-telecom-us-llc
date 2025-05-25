@@ -8,9 +8,10 @@ import CustomerNumberForm from '../components/customers/CustomerNumberForm';
 const CustomerDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, customerNumbers, customerPlans, plans, sales, invoices, deleteCustomer, deleteCustomerNumber } = useApp();
+  const { customers, customerNumbers, customerPlans, plans, sales, invoices, deleteCustomer, deleteCustomerNumber, updateCustomer } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingNumber, setIsAddingNumber] = useState(false);
+  const [editingNumberId, setEditingNumberId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -40,6 +41,18 @@ const CustomerDetails: React.FC = () => {
     setIsEditing(true);
   };
 
+  const handleSaveEdit = async () => {
+    try {
+      await updateCustomer({
+        ...customer,
+        ...editForm
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+    }
+  };
+
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
       await deleteCustomer(customer.id);
@@ -51,6 +64,10 @@ const CustomerDetails: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this phone number?')) {
       await deleteCustomerNumber(numberId);
     }
+  };
+
+  const handleEditNumber = (numberId: string) => {
+    setEditingNumberId(numberId);
   };
 
   return (
@@ -131,10 +148,7 @@ const CustomerDetails: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    // Handle save
-                    setIsEditing(false);
-                  }}
+                  onClick={handleSaveEdit}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   Save Changes
@@ -204,17 +218,36 @@ const CustomerDetails: React.FC = () => {
           <div className="space-y-4">
             {numbers.map(number => (
               <div key={number.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-gray-900">{number.name}</h4>
-                  <p className="text-sm text-gray-500">{number.phoneNumber}</p>
-                  <p className="text-sm text-gray-500">{number.carrier}</p>
-                </div>
-                <button
-                  onClick={() => handleDeleteNumber(number.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <Trash2 size={16} />
-                </button>
+                {editingNumberId === number.id ? (
+                  <CustomerNumberForm
+                    customerId={customer.id}
+                    number={number}
+                    onSuccess={() => setEditingNumberId(null)}
+                    onCancel={() => setEditingNumberId(null)}
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="font-medium text-gray-900">{number.name}</h4>
+                      <p className="text-sm text-gray-500">{number.phoneNumber}</p>
+                      <p className="text-sm text-gray-500">{number.carrier}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleEditNumber(number.id)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNumber(number.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
 
