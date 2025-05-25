@@ -1,13 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, X } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
 interface SortConfig {
   key: string;
   direction: 'asc' | 'desc';
+}
+
+interface EditingSale {
+  paymentStatus: 'paid' | 'partial' | 'unpaid';
+  orderStatus: 'delivered' | 'canceled' | 'processing';
+  internalNotes: string;
 }
 
 const SalesList: React.FC = () => {
@@ -20,6 +26,11 @@ const SalesList: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
+  const [editingValues, setEditingValues] = useState<EditingSale>({
+    paymentStatus: 'unpaid',
+    orderStatus: 'processing',
+    internalNotes: ''
+  });
   
   // Filter sales based on all criteria
   const filteredSales = useMemo(() => {
@@ -30,10 +41,11 @@ const SalesList: React.FC = () => {
       const matchesSearch = 
         customer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         plan?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sale.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sale.amount.toString().includes(searchQuery);
       
-      const matchesPaymentStatus = selectedPaymentStatus === 'all' || (sale.paymentStatus || 'unpaid') === selectedPaymentStatus;
-      const matchesOrderStatus = selectedOrderStatus === 'all' || (sale.orderStatus || 'processing') === selectedOrderStatus;
+      const matchesPaymentStatus = selectedPaymentStatus === 'all' || sale.paymentStatus === selectedPaymentStatus;
+      const matchesOrderStatus = selectedOrderStatus === 'all' || sale.orderStatus === selectedOrderStatus;
       const matchesBusiness = selectedBusiness === 'all' || sale.businessType?.startsWith(selectedBusiness.toLowerCase());
       
       // Date range filtering
@@ -81,19 +93,20 @@ const SalesList: React.FC = () => {
   
   // Format date
   const formatDate = (date: Date) => {
-    return new Intl.NumberFormat('en-US', { 
+    return new Intl.DateTimeFormat('en-US', { 
       year: 'numeric', 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     }).format(date);
   };
   
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 
@@ -105,8 +118,8 @@ const SalesList: React.FC = () => {
     }));
   };
   
-  // Status badge
-  const getPaymentStatusBadge = (status: string = 'unpaid') => {
+  // Status badges
+  const getPaymentStatusBadge = (status: string) => {
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
@@ -123,7 +136,7 @@ const SalesList: React.FC = () => {
     );
   };
 
-  const getOrderStatusBadge = (status: string = 'processing') => {
+  const getOrderStatusBadge = (status: string) => {
     const badgeColors = {
       'delivered': 'bg-green-100 text-green-800',
       'canceled': 'bg-red-100 text-red-800',
@@ -146,14 +159,19 @@ const SalesList: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (saleId: string, paymentStatus: string, orderStatus: string) => {
-    const sale = sales.find(s => s.id === saleId);
-    if (!sale) return;
+  const startEditing = (sale: Sale) => {
+    setEditingSaleId(sale.id);
+    setEditingValues({
+      paymentStatus: sale.paymentStatus,
+      orderStatus: sale.orderStatus,
+      internalNotes: sale.internalNotes || ''
+    });
+  };
 
+  const handleSaveEdit = async (sale: Sale) => {
     await updateSale({
       ...sale,
-      paymentStatus: paymentStatus as 'paid' | 'partial' | 'unpaid',
-      orderStatus: orderStatus as 'delivered' | 'canceled' | 'processing'
+      ...editingValues
     });
     setEditingSaleId(null);
   };
@@ -292,6 +310,9 @@ const SalesList: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Invoice #
+                </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -351,85 +372,149 @@ const SalesList: React.FC = () => {
                 const plan = plans.find(p => p.id === sale.planId);
                 
                 return (
-                  <tr key={sale.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Calendar size={16} className="text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">{formatDate(sale.date)}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                          <User size={14} />
+                  <React.Fragment key={sale.id}>
+                    <tr 
+                      className={`hover:bg-gray-50 cursor-pointer ${editingSaleId === sale.id ? 'bg-blue-50' : ''}`}
+                      onClick={() => startEditing(sale)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {sale.invoiceNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Calendar size={16} className="text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-900">{formatDate(sale.date)}</span>
                         </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{customer?.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                            <User size={14} />
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{customer?.name}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {sale.businessType?.startsWith('telecom') ? 'Eliyas Telecom' : 'US Tours And Travels'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{plan?.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(sale.amount).replace('$', '')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {editingSaleId === sale.id ? (
-                        <select
-                          value={sale.paymentStatus}
-                          onChange={(e) => handleUpdateStatus(sale.id, e.target.value, sale.orderStatus)}
-                          className="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                        >
-                          <option value="paid">Paid</option>
-                          <option value="partial">Partial</option>
-                          <option value="unpaid">Unpaid</option>
-                        </select>
-                      ) : (
-                        getPaymentStatusBadge(sale.paymentStatus)
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {editingSaleId === sale.id ? (
-                        <select
-                          value={sale.orderStatus}
-                          onChange={(e) => handleUpdateStatus(sale.id, sale.paymentStatus, e.target.value)}
-                          className="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                        >
-                          <option value="delivered">Delivered</option>
-                          <option value="canceled">Canceled</option>
-                          <option value="processing">Processing</option>
-                        </select>
-                      ) : (
-                        getOrderStatusBadge(sale.orderStatus)
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => setEditingSaleId(editingSaleId === sale.id ? null : sale.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSale(sale.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {sale.businessType?.startsWith('telecom') ? 'Eliyas Telecom' : 'US Tours And Travels'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{plan?.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCurrency(sale.amount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getPaymentStatusBadge(sale.paymentStatus)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getOrderStatusBadge(sale.orderStatus)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSale(sale.id);
+                            }}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {editingSaleId === sale.id && (
+                      <tr className="bg-blue-50">
+                        <td colSpan={9} className="px-6 py-4">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-4 flex-1 mr-8">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Payment Status
+                                </label>
+                                <select
+                                  value={editingValues.paymentStatus}
+                                  onChange={(e) => setEditingValues(prev => ({
+                                    ...prev,
+                                    paymentStatus: e.target.value as 'paid' | 'partial' | 'unpaid'
+                                  }))}
+                                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                >
+                                  <option value="paid">Paid</option>
+                                  <option value="partial">Partial</option>
+                                  <option value="unpaid">Unpaid</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Order Status
+                                </label>
+                                <select
+                                  value={editingValues.orderStatus}
+                                  onChange={(e) => setEditingValues(prev => ({
+                                    ...prev,
+                                    orderStatus: e.target.value as 'delivered' | 'canceled' | 'processing'
+                                  }))}
+                                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                >
+                                  <option value="delivered">Delivered</option>
+                                  <option value="canceled">Canceled</option>
+                                  <option value="processing">Processing</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Internal Notes
+                                </label>
+                                <textarea
+                                  value={editingValues.internalNotes}
+                                  onChange={(e) => setEditingValues(prev => ({
+                                    ...prev,
+                                    internalNotes: e.target.value
+                                  }))}
+                                  rows={3}
+                                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                />
+                              </div>
+
+                              <div className="flex justify-end space-x-3">
+                                <button
+                                  onClick={() => setEditingSaleId(null)}
+                                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleSaveEdit(sale)}
+                                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                                >
+                                  Save Changes
+                                </button>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => setEditingSaleId(null)}
+                              className="text-gray-400 hover:text-gray-500"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
               
               {paginatedSales.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-10 text-center text-gray-500">
                     {searchQuery 
                       ? `No sales found matching "${searchQuery}"`
                       : 'No sales recorded yet.'}
