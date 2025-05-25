@@ -178,7 +178,7 @@ const SalesList: React.FC = () => {
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const customer = customers.find(c => c.id === sale.customerId);
-      const searchString = `${customer?.name} ${customer?.phone} ${sale.id}`.toLowerCase();
+      const searchString = `${customer?.name || ''} ${customer?.phone || ''} ${sale.id}`.toLowerCase();
       return searchString.includes(searchTerm.toLowerCase());
     });
   }, [sales, customers, searchTerm]);
@@ -305,18 +305,21 @@ const SalesList: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                        {customer?.name?.charAt(0) || '?'}
+                      </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {customer?.name}
+                          {customer?.name || 'Unknown Customer'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {customer?.phone}
+                          {customer?.phone || 'No phone'}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {BUSINESS_TYPE_LABELS[sale.businessType as keyof typeof BUSINESS_TYPE_LABELS]}
+                    {BUSINESS_TYPE_LABELS[sale.businessType as keyof typeof BUSINESS_TYPE_LABELS] || 'Unknown Type'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatCurrency(sale.amount)}
