@@ -39,6 +39,7 @@ interface AppContextType {
   addCustomerPlan: (customerPlan: Omit<CustomerPlan, 'id'>) => Promise<void>;
   updateCustomerPlan: (customerPlan: CustomerPlan) => Promise<void>;
   addPayment: (payment: Payment) => Promise<void>;
+  updateCustomerNumber: (number: CustomerNumber) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -273,6 +274,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const updateCustomerNumber = async (number: CustomerNumber) => {
+    try {
+      setCustomerNumbers(prev => prev.map(n => n.id === number.id ? number : n));
+      toast.success('Phone number updated successfully');
+    } catch (error) {
+      console.error('Error updating phone number:', error);
+      toast.error('Failed to update phone number');
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       customers,
@@ -294,6 +306,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addCustomerPlan,
       updateCustomerPlan,
       addPayment,
+      updateCustomerNumber,
     }}>
       {children}
     </AppContext.Provider>
