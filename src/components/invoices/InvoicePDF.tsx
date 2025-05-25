@@ -1,8 +1,20 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { Invoice, Customer, Settings } from '../../types';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
+
+// Register the Inter font
+Font.register({
+  family: 'Inter',
+  src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2',
+});
+
+// Register Helvetica as fallback
+Font.register({
+  family: 'Helvetica',
+  src: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2',
+});
 
 interface InvoicePDFProps {
   invoice: Invoice;
