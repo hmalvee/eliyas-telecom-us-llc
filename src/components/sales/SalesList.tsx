@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
 import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { format } from 'date-fns';
 import OrderDetailsModal from './OrderDetailsModal';
 
 const ITEMS_PER_PAGE = 10;
