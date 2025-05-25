@@ -49,14 +49,16 @@ export interface Payment {
 export interface Sale {
   id: string;
   customerId: string;
-  planId: string;
+  planId?: string;
   amount: number;
   amountPaid: number;
   date: Date;
   paymentMethod: 'cash' | 'card' | 'online';
   status: 'paid' | 'partial' | 'unpaid' | 'not-delivered' | 'pending';
   notes: string;
-  business: 'telecom' | 'travel';
+  businessType?: 'telecom_recharge' | 'telecom_phone' | 'telecom_service' | 'telecom_other' | 'travel_domestic' | 'travel_international' | 'travel_visa' | 'travel_custom';
+  customerNumberId?: string;
+  profit?: number;
 }
 
 export interface Invoice {

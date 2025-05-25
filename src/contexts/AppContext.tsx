@@ -207,15 +207,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       // Parse the notes to get the description
       let description = '';
-      if (sale.business === 'telecom') {
+      if (sale.businessType === 'telecom_recharge') {
         const notes = sale.notes.split('\n');
-        const carrier = notes[0].replace('Carrier: ', '');
-        const number = notes[1].replace('Number: ', '');
-        description = `${carrier} Recharge for ${number}`;
-      } else if (sale.business === 'travel') {
+        const number = notes.find(n => n.startsWith('Number:'))?.replace('Number: ', '') || '';
+        description = `Recharge for ${number}`;
+      } else if (sale.businessType?.startsWith('travel_')) {
         const notes = sale.notes.split('\n');
-        const route = notes[0].replace('Route: ', '');
-        description = `Flight Ticket - ${route}`;
+        const route = notes.find(n => n.startsWith('Route:'))?.replace('Route: ', '') || '';
+        description = `Travel Booking - ${route}`;
+      } else if (sale.businessType === 'telecom_phone') {
+        const notes = sale.notes.split('\n');
+        const brand = notes.find(n => n.startsWith('Brand:'))?.replace('Brand: ', '') || '';
+        const model = notes.find(n => n.startsWith('Model:'))?.replace('Model: ', '') || '';
+        description = `Phone Sale - ${brand} ${model}`;
+      } else if (sale.businessType === 'telecom_service') {
+        const notes = sale.notes.split('\n');
+        const service = notes.find(n => n.startsWith('Service:'))?.replace('Service: ', '') || '';
+        description = `Service - ${service}`;
+      } else {
+        description = sale.notes;
       }
 
       const newInvoice: Invoice = {
