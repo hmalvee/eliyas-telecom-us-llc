@@ -1,20 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
-import { format, addDays, isWithinInterval, parseISO } from 'date-fns';
-import { Search, Mail, AlertCircle, Check, Clock } from 'lucide-react';
+import { format, addDays, isWithinInterval } from 'date-fns';
+import { Search, Mail, AlertCircle, Check, Clock, Edit2, X } from 'lucide-react';
 import { toast } from 'react-toastify';
+import OrderDetailsModal from '../components/sales/OrderDetailsModal';
 
 const RechargeHistory: React.FC = () => {
   const { sales, customers, customerNumbers } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [reminderFilter, setReminderFilter] = useState('all');
+  const [selectedSale, setSelectedSale] = useState<any>(null);
 
   // Filter recharge transactions
   const recharges = useMemo(() => {
     return sales.filter(sale => 
       sale.businessType === 'telecom_recharge' &&
-      (selectedStatus === 'all' || sale.status === selectedStatus)
+      (selectedStatus === 'all' || sale.paymentStatus === selectedStatus)
     ).map(sale => {
       const customer = customers.find(c => c.id === sale.customerId);
       const number = sale.customerNumberId 
@@ -129,6 +131,9 @@ const RechargeHistory: React.FC = () => {
                   Number
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Carrier
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -147,7 +152,7 @@ const RechargeHistory: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRecharges.map((recharge) => (
-                <tr key={recharge.id} className={`hover:bg-gray-50 ${
+                <tr key={recharge.id} className={`hover:bg-gray-50 cursor-pointer ${
                   recharge.isExpiringSoon ? 'bg-yellow-50' : 
                   recharge.isRecentlyExpired ? 'bg-red-50' : ''
                 }`}>
@@ -165,7 +170,17 @@ const RechargeHistory: React.FC = () => {
                     </div>
                     {recharge.number && (
                       <div className="text-sm text-gray-500">
-                        {recharge.number.name} - {recharge.number.carrier}
+                        {recharge.number.name}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {recharge.number?.carrier || 'N/A'}
+                    </div>
+                    {recharge.number?.customCarrier && (
+                      <div className="text-sm text-gray-500">
+                        {recharge.number.customCarrier}
                       </div>
                     )}
                   </td>
@@ -193,31 +208,34 @@ const RechargeHistory: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      recharge.status === 'paid' ? 'bg-green-100 text-green-800' :
-                      recharge.status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
+                      recharge.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                      recharge.paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
-                      {recharge.status.charAt(0).toUpperCase() + recharge.status.slice(1)}
+                      {recharge.paymentStatus.charAt(0).toUpperCase() + recharge.paymentStatus.slice(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => setSelectedSale(recharge)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        <Edit2 size={16} />
+                      </button>
                       {(recharge.isExpiringSoon || recharge.isRecentlyExpired) && (
                         <button
-                          onClick={() => sendReminder(recharge)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendReminder(recharge);
+                          }}
                           className="text-blue-600 hover:text-blue-900 flex items-center"
                           disabled={recharge.reminderSent}
                         >
                           {recharge.reminderSent ? (
-                            <>
-                              <Check size={16} className="mr-1" />
-                              <span>Sent</span>
-                            </>
+                            <Check size={16} className="text-green-500" />
                           ) : (
-                            <>
-                              <Mail size={16} className="mr-1" />
-                              <span>Send Reminder</span>
-                            </>
+                            <Mail size={16} />
                           )}
                         </button>
                       )}
@@ -228,7 +246,7 @@ const RechargeHistory: React.FC = () => {
 
               {filteredRecharges.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
                     No recharge history found
                   </td>
                 </tr>
@@ -279,6 +297,14 @@ const RechargeHistory: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {selectedSale && (
+        <OrderDetailsModal
+          sale={selectedSale}
+          customer={selectedSale.customer}
+          onClose={() => setSelectedSale(null)}
+        />
+      )}
     </div>
   );
 };
