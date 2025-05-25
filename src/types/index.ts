@@ -12,7 +12,7 @@ export interface Plan {
   name: string;
   description: string;
   price: number;
-  duration: number; // in days
+  duration: number;
   data: string;
   calls: string;
   texts: string;
@@ -28,13 +28,24 @@ export interface CustomerPlan {
   reminderSent: boolean;
 }
 
+export interface Payment {
+  id: string;
+  saleId: string;
+  amount: number;
+  date: Date;
+  method: 'cash' | 'card' | 'online';
+  notes?: string;
+}
+
 export interface Sale {
   id: string;
   customerId: string;
   planId: string;
   amount: number;
+  amountPaid: number;
   date: Date;
   paymentMethod: 'cash' | 'card' | 'online';
+  status: 'paid' | 'partial' | 'unpaid';
   notes: string;
 }
 
