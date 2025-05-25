@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
@@ -16,6 +17,7 @@ import Plans from './pages/Plans';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PrivateRoute from './components/auth/PrivateRoute';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
@@ -39,6 +41,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+          <ToastContainer position="top-right" autoClose={3000} />
         </Router>
       </AppProvider>
     </AuthProvider>

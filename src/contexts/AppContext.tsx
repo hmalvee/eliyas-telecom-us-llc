@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { toast } from 'react-toastify';
 import { 
   customers as initialCustomers,
   plans as initialPlans,
@@ -26,7 +27,9 @@ interface AppContextType {
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate'>) => void;
   updateCustomer: (customer: Customer) => void;
   deleteCustomer: (id: string) => void;
-  addSale: (sale: Omit<Sale, 'id'>) => void;
+  addSale: (sale: Omit<Sale, 'id' | 'amountPaid' | 'status'>) => Sale;
+  updateSale: (sale: Sale) => void;
+  deleteSale: (id: string) => void;
   generateInvoice: (sale: Sale) => void;
   addCustomerPlan: (customerPlan: Omit<CustomerPlan, 'id'>) => void;
   updateCustomerPlan: (customerPlan: CustomerPlan) => void;
@@ -56,11 +59,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...dashboardStats,
       totalCustomers: dashboardStats.totalCustomers + 1
     });
+
+    toast.success('Customer added successfully');
   };
 
   // Update an existing customer
   const updateCustomer = (customer: Customer) => {
     setCustomers(customers.map(c => c.id === customer.id ? customer : c));
+    toast.success('Customer updated successfully');
   };
 
   // Delete a customer
@@ -72,13 +78,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...dashboardStats,
       totalCustomers: dashboardStats.totalCustomers - 1
     });
+
+    toast.success('Customer deleted successfully');
   };
 
   // Add a new sale
-  const addSale = (sale: Omit<Sale, 'id'>) => {
+  const addSale = (saleData: Omit<Sale, 'id' | 'amountPaid' | 'status'>) => {
     const newSale: Sale = {
-      ...sale,
+      ...saleData,
       id: `sale${sales.length + 1}`,
+      amountPaid: 0,
+      status: 'unpaid'
     };
     setSales([...sales, newSale]);
     
@@ -86,12 +96,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setDashboardStats({
       ...dashboardStats,
       totalSales: dashboardStats.totalSales + 1,
-      revenueToday: sale.date.toDateString() === new Date().toDateString() 
-        ? dashboardStats.revenueToday + sale.amount 
+      revenueToday: saleData.date.toDateString() === new Date().toDateString() 
+        ? dashboardStats.revenueToday + saleData.amount 
         : dashboardStats.revenueToday
     });
-    
+
+    toast.success('Sale created successfully');
     return newSale;
+  };
+
+  // Update a sale
+  const updateSale = (sale: Sale) => {
+    setSales(sales.map(s => s.id === sale.id ? sale : s));
+    toast.success('Sale updated successfully');
+  };
+
+  // Delete a sale
+  const deleteSale = (id: string) => {
+    setSales(sales.filter(s => s.id !== id));
+    toast.success('Sale deleted successfully');
   };
 
   // Generate an invoice from a sale
@@ -124,6 +147,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     
     setInvoices([...invoices, newInvoice]);
+    toast.success('Invoice generated successfully');
   };
 
   // Add a customer plan
@@ -141,6 +165,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         activePlans: dashboardStats.activePlans + 1
       });
     }
+
+    toast.success('Plan assigned successfully');
   };
 
   // Update a customer plan
@@ -162,6 +188,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
       }
     }
+
+    toast.success('Plan updated successfully');
   };
 
   return (
@@ -176,6 +204,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateCustomer,
       deleteCustomer,
       addSale,
+      updateSale,
+      deleteSale,
       generateInvoice,
       addCustomerPlan,
       updateCustomerPlan,
