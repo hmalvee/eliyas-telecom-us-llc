@@ -7,9 +7,18 @@ import {
   CustomerPlan, 
   Sale, 
   Invoice, 
-  DashboardStats 
+  DashboardStats,
+  Settings 
 } from '../types';
-import { customers as initialCustomers, plans as initialPlans, customerPlans as initialCustomerPlans, sales as initialSales, invoices as initialInvoices, dashboardStats as initialDashboardStats } from '../data/mockData';
+import { 
+  customers as initialCustomers, 
+  plans as initialPlans, 
+  customerPlans as initialCustomerPlans, 
+  sales as initialSales, 
+  invoices as initialInvoices, 
+  dashboardStats as initialDashboardStats,
+  settings as initialSettings 
+} from '../data/mockData';
 
 interface Payment {
   saleId: string;
@@ -27,6 +36,7 @@ interface AppContextType {
   sales: Sale[];
   invoices: Invoice[];
   dashboardStats: DashboardStats;
+  settings: Settings;
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate'>) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
@@ -42,6 +52,7 @@ interface AppContextType {
   updateCustomerNumber: (number: CustomerNumber) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
   updateInvoice: (invoice: Invoice) => Promise<void>;
+  updateSettings: (settings: Settings) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -54,6 +65,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [sales, setSales] = useState<Sale[]>(initialSales);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>(initialDashboardStats);
+  const [settings, setSettings] = useState<Settings>(initialSettings);
 
   // Add a new customer
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate'>) => {
@@ -234,7 +246,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         tax: Number((sale.amount * 0.09).toFixed(2)),
         total: Number((sale.amount * 1.09).toFixed(2)),
         status: sale.paymentStatus === 'paid' ? 'paid' : 
-                sale.paymentStatus === 'partial' ? 'partial' : 'unpaid'
+                sale.paymentStatus === 'partial' ? 'partial' : 'unpaid',
+        currency: settings.invoiceTemplate.currency || 'USD',
+        exchangeRate: 1,
+        template: settings.invoiceTemplate.template || 'standard',
+        notes: [],
+        terms: [],
+        customFields: {}
       };
 
       setInvoices(prev => [...prev, newInvoice]);
@@ -360,6 +378,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Update settings
+  const updateSettings = async (newSettings: Settings) => {
+    try {
+      setSettings(newSettings);
+      toast.success('Settings updated successfully');
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      toast.error('Failed to update settings');
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       customers,
@@ -369,6 +399,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       sales,
       invoices,
       dashboardStats,
+      settings,
       addCustomer,
       updateCustomer,
       deleteCustomer,
@@ -384,6 +415,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateCustomerNumber,
       deleteInvoice,
       updateInvoice,
+      updateSettings,
     }}>
       {children}
     </AppContext.Provider>
