@@ -32,8 +32,8 @@ const SalesList: React.FC = () => {
         plan?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sale.amount.toString().includes(searchQuery);
       
-      const matchesPaymentStatus = selectedPaymentStatus === 'all' || sale.paymentStatus === selectedPaymentStatus;
-      const matchesOrderStatus = selectedOrderStatus === 'all' || sale.orderStatus === selectedOrderStatus;
+      const matchesPaymentStatus = selectedPaymentStatus === 'all' || (sale.paymentStatus || 'unpaid') === selectedPaymentStatus;
+      const matchesOrderStatus = selectedOrderStatus === 'all' || (sale.orderStatus || 'processing') === selectedOrderStatus;
       const matchesBusiness = selectedBusiness === 'all' || sale.businessType?.startsWith(selectedBusiness.toLowerCase());
       const matchesCustomer = selectedCustomer === 'all' || sale.customerId === selectedCustomer;
       
@@ -107,7 +107,7 @@ const SalesList: React.FC = () => {
   };
   
   // Status badge
-  const getPaymentStatusBadge = (status: string) => {
+  const getPaymentStatusBadge = (status: string = 'unpaid') => {
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
@@ -124,7 +124,7 @@ const SalesList: React.FC = () => {
     );
   };
 
-  const getOrderStatusBadge = (status: string) => {
+  const getOrderStatusBadge = (status: string = 'processing') => {
     const badgeColors = {
       'delivered': 'bg-green-100 text-green-800',
       'canceled': 'bg-red-100 text-red-800',
