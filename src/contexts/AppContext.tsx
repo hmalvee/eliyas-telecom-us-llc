@@ -130,8 +130,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const newSale: Sale = {
         ...saleData,
         id: Math.random().toString(36).substr(2, 9),
-        amountPaid: saleData.paymentMethod === 'cash' ? saleData.amount : 0,
-        status: saleData.paymentMethod === 'cash' ? 'paid' : 'unpaid'
+        amountPaid: saleData.paymentStatus === 'paid' ? saleData.amount : 
+                    saleData.paymentStatus === 'partial' ? saleData.paymentAmount || 0 : 0,
+        status: saleData.paymentStatus
       };
       setSales(prev => [...prev, newSale]);
       
@@ -151,6 +152,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateSale = async (sale: Sale) => {
     try {
       setSales(prev => prev.map(s => s.id === sale.id ? sale : s));
+      
+      // Update corresponding invoice
+      setInvoices(prev => prev.map(invoice => {
+        if (invoice.saleId === sale.id) {
+          return {
+            ...invoice,
+            status: sale.paymentStatus === 'paid' ? 'paid' : 
+                    sale.paymentStatus === 'partial' ? 'partial' : 'unpaid'
+          };
+        }
+        return invoice;
+      }));
+
       toast.success('Sale updated successfully');
     } catch (error) {
       console.error('Error updating sale:', error);
@@ -167,33 +181,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) {
       console.error('Error deleting sale:', error);
       toast.error('Failed to delete sale');
-      throw error;
-    }
-  };
-
-  // Add a payment to a sale
-  const addPayment = async (payment: Payment) => {
-    try {
-      setSales(prevSales => {
-        return prevSales.map(sale => {
-          if (sale.id === payment.saleId) {
-            const newAmountPaid = sale.amountPaid + payment.amount;
-            const newStatus = newAmountPaid >= sale.amount ? 'paid' : 'partial';
-            
-            return {
-              ...sale,
-              amountPaid: newAmountPaid,
-              status: newStatus
-            };
-          }
-          return sale;
-        });
-      });
-      
-      toast.success('Payment recorded successfully');
-    } catch (error) {
-      console.error('Error recording payment:', error);
-      toast.error('Failed to record payment');
       throw error;
     }
   };
@@ -246,7 +233,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         subtotal: sale.amount,
         tax: Number((sale.amount * 0.09).toFixed(2)),
         total: Number((sale.amount * 1.09).toFixed(2)),
-        status: sale.status
+        status: sale.paymentStatus === 'paid' ? 'paid' : 
+                sale.paymentStatus === 'partial' ? 'partial' : 'unpaid'
       };
 
       setInvoices(prev => [...prev, newInvoice]);
@@ -286,6 +274,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Add a payment to a sale
+  const addPayment = async (payment: Payment) => {
+    try {
+      setSales(prevSales => {
+        return prevSales.map(sale => {
+          if (sale.id === payment.saleId) {
+            const newAmountPaid = sale.amountPaid + payment.amount;
+            const newStatus = newAmountPaid >= sale.amount ? 'paid' : 'partial';
+            
+            // Update corresponding invoice
+            setInvoices(prev => prev.map(invoice => {
+              if (invoice.saleId === sale.id) {
+                return {
+                  ...invoice,
+                  status: newStatus === 'paid' ? 'paid' : 'partial'
+                };
+              }
+              return invoice;
+            }));
+            
+            return {
+              ...sale,
+              amountPaid: newAmountPaid,
+              paymentStatus: newStatus
+            };
+          }
+          return sale;
+        });
+      });
+      
+      toast.success('Payment recorded successfully');
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
+      throw error;
+    }
+  };
+
   const updateCustomerNumber = async (number: CustomerNumber) => {
     try {
       setCustomerNumbers(prev => prev.map(n => n.id === number.id ? number : n));
@@ -313,6 +339,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateInvoice = async (invoice: Invoice) => {
     try {
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
+      
+      // Update corresponding sale status
+      setSales(prev => prev.map(sale => {
+        if (sale.id === invoice.saleId) {
+          return {
+            ...sale,
+            paymentStatus: invoice.status === 'paid' ? 'paid' : 
+                          invoice.status === 'partial' ? 'partial' : 'unpaid'
+          };
+        }
+        return sale;
+      }));
+
       toast.success('Invoice updated successfully');
     } catch (error) {
       console.error('Error updating invoice:', error);
