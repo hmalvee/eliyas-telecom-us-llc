@@ -105,7 +105,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
                   <input
                     type="number"
                     value={editedSale.amount}
-                    onChange={(e) => setEditedSale({ ...editedSale, amount: parseFloat(e.target.value) })}
+                    onChange={(e) => {
+                      const newAmount = parseFloat(e.target.value);
+                      setEditedSale(prev => ({
+                        ...prev,
+                        amount: newAmount,
+                        amountPaid: prev.paymentStatus === 'paid' ? newAmount : prev.amountPaid
+                      }));
+                    }}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
                   />
                 ) : (
@@ -118,7 +125,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
                   <input
                     type="number"
                     value={editedSale.amountPaid}
-                    onChange={(e) => setEditedSale({ ...editedSale, amountPaid: parseFloat(e.target.value) })}
+                    onChange={(e) => {
+                      const newAmountPaid = parseFloat(e.target.value);
+                      setEditedSale(prev => ({
+                        ...prev,
+                        amountPaid: newAmountPaid,
+                        paymentStatus: newAmountPaid >= prev.amount ? 'paid' :
+                                     newAmountPaid > 0 ? 'partial' : 'unpaid'
+                      }));
+                    }}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
                   />
                 ) : (
@@ -154,7 +169,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
                 {isEditing ? (
                   <select
                     value={editedSale.paymentStatus}
-                    onChange={(e) => setEditedSale({ ...editedSale, paymentStatus: e.target.value })}
+                    onChange={(e) => {
+                      const newStatus = e.target.value;
+                      setEditedSale(prev => ({
+                        ...prev,
+                        paymentStatus: newStatus,
+                        amountPaid: newStatus === 'paid' ? prev.amount :
+                                   newStatus === 'unpaid' ? 0 : prev.amountPaid
+                      }));
+                    }}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
                   >
                     <option value="paid">Paid</option>
