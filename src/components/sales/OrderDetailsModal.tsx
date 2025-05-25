@@ -36,6 +36,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
     }
   };
 
+  // Calculate due amount
+  const getDueAmount = () => {
+    return editedSale.amount - editedSale.amountPaid;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl p-6">
@@ -112,6 +117,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
                   <div className="text-sm font-medium">${formatCurrency(sale.amountPaid)}</div>
                 )}
               </div>
+              {(isEditing ? editedSale.paymentStatus === 'partial' : sale.paymentStatus === 'partial') && (
+                <div>
+                  <div className="text-sm text-gray-500">Due Amount</div>
+                  <div className="text-sm font-medium text-red-600">
+                    ${formatCurrency(getDueAmount())}
+                  </div>
+                </div>
+              )}
               <div>
                 <div className="text-sm text-gray-500">Payment Method</div>
                 {isEditing ? (
