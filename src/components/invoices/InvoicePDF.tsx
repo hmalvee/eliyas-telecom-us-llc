@@ -4,16 +4,33 @@ import { Invoice, Customer, Settings } from '../../types';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
 
-// Register the Inter font
+// Register fonts
 Font.register({
   family: 'Inter',
-  src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2',
+  fonts: [
+    {
+      src: 'https://rsms.me/inter/font-files/Inter-Regular.woff2',
+      fontWeight: 400,
+    },
+    {
+      src: 'https://rsms.me/inter/font-files/Inter-Medium.woff2',
+      fontWeight: 500,
+    },
+    {
+      src: 'https://rsms.me/inter/font-files/Inter-Bold.woff2',
+      fontWeight: 700,
+    },
+  ],
 });
 
 // Register Helvetica as fallback
 Font.register({
   family: 'Helvetica',
-  src: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2',
+  fonts: [
+    {
+      src: 'https://db.onlinewebfonts.com/t/5a8e8ddbf44cd03d7a6e3a0f46c5fee6.woff2',
+    },
+  ],
 });
 
 interface InvoicePDFProps {
@@ -34,7 +51,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, customer, settings }) 
     page: {
       padding: 30,
       fontSize: 12,
-      fontFamily: settings.invoiceTemplate.font || 'Helvetica',
+      fontFamily: 'Inter',
       color: '#333',
     },
     header: {
