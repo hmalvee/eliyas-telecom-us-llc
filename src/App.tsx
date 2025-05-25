@@ -13,6 +13,7 @@ import Sales from './pages/Sales';
 import NewSale from './pages/NewSale';
 import SalePayment from './pages/SalePayment';
 import Invoices from './pages/Invoices';
+import NewInvoice from './pages/NewInvoice';
 import RechargeHistory from './pages/RechargeHistory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -35,6 +36,7 @@ function App() {
               <Route path="sales/new" element={<NewSale />} />
               <Route path="sales/:id/payment" element={<SalePayment />} />
               <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices/new" element={<NewInvoice />} />
               <Route path="recharge-history" element={<RechargeHistory />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
@@ -47,5 +49,3 @@ function App() {
     </AuthProvider>
   );
 }
-
-export default App;
