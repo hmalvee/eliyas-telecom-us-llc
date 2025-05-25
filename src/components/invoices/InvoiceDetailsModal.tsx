@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mail } from 'lucide-react';
-import { format } from 'date-fns';
 import { useApp } from '../../contexts/AppContext';
 import { Invoice, Customer } from '../../types';
 import { PDFViewer } from '@react-pdf/renderer';
