@@ -21,7 +21,7 @@ const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
   onClose,
   isCreating = false
 }) => {
-  const { updateInvoice, customers, settings } = useApp();
+  const { updateInvoice, customers } = useApp();
   const [isEditing, setIsEditing] = useState(isCreating);
   const [showPDF, setShowPDF] = useState(false);
   const [editedInvoice, setEditedInvoice] = useState(invoice);
@@ -183,11 +183,7 @@ const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
         {showPDF ? (
           <div className="h-[600px]">
             <PDFViewer width="100%" height="100%">
-              <InvoicePDF 
-                invoice={editedInvoice}
-                customer={selectedCustomer!}
-                settings={settings}
-              />
+              <InvoicePDF invoice={editedInvoice} customer={selectedCustomer!} />
             </PDFViewer>
           </div>
         ) : (

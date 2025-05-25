@@ -16,7 +16,7 @@ interface SortConfig {
 }
 
 const InvoiceList: React.FC = () => {
-  const { invoices, customers, sales, deleteInvoice, updateInvoice, settings } = useApp();
+  const { invoices, customers, sales, deleteInvoice, updateInvoice } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -340,23 +340,12 @@ const InvoiceList: React.FC = () => {
                           <Edit2 size={16} />
                         </button>
                         <PDFDownloadLink
-                          document={
-                            <InvoicePDF 
-                              invoice={invoice}
-                              customer={customer!}
-                              settings={settings}
-                            />
-                          }
+                          document={<InvoicePDF invoice={invoice} customer={customer!} />}
                           fileName={`invoice-${invoice.id.slice(0, 8)}.pdf`}
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {({ loading }) => (
-                            <button
-                              className="text-blue-600 hover:text-blue-900"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <FileText size={16} />
-                            </button>
-                          )}
+                          <FileText size={16} />
                         </PDFDownloadLink>
                         <button
                           onClick={(e) => {
