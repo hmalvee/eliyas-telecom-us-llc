@@ -20,6 +20,7 @@ const SalesList: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
+  const [selectedSale, setSelectedSale] = useState(null);
 
   // Filter sales based on all criteria
   const filteredSales = useMemo(() => {
@@ -340,7 +341,11 @@ const SalesList: React.FC = () => {
                 const customer = customers.find(c => c.id === sale.customerId);
                 
                 return (
-                  <tr key={sale.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={sale.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedSale(sale)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Calendar size={16} className="text-gray-400 mr-2" />
@@ -492,6 +497,13 @@ const SalesList: React.FC = () => {
           </div>
         )}
       </div>
+      {selectedSale && (
+        <OrderDetailsModal
+          sale={selectedSale}
+          customer={customers.find(c => c.id === selectedSale.customerId)}
+          onClose={() => setSelectedSale(null)}
+        />
+      )}
     </div>
   );
 };
