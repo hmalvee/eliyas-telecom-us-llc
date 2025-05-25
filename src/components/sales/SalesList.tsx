@@ -51,7 +51,16 @@ const SalesList: React.FC = () => {
   };
   
   // Status badge
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
+    // Return a default badge if status is undefined or not a string
+    if (typeof status !== 'string') {
+      return (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+          Unknown
+        </span>
+      );
+    }
+
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
