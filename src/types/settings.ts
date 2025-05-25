@@ -27,6 +27,7 @@ export interface Settings {
     footer: string;
     currency: string;
     template: 'standard' | 'professional' | 'minimal';
+    business?: 'telecom' | 'travel';
   };
   email: {
     senderName: string;
