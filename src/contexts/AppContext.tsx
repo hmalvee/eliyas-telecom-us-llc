@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { Invoice } from '../types';
 
 interface AppContextType {
