@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Calendar, User, Edit2, DollarSign } from 'lucide-react';
+import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2 } from 'lucide-react';
 
 const SalesList: React.FC = () => {
-  const { sales, customers, plans } = useApp();
+  const { sales, customers, plans, deleteSale } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [showPartialPayments, setShowPartialPayments] = useState(false);
   
@@ -63,6 +63,12 @@ const SalesList: React.FC = () => {
         {displayStatus}
       </span>
     );
+  };
+
+  const handleDeleteSale = async (saleId: string) => {
+    if (window.confirm('Are you sure you want to delete this sale? This action cannot be undone.')) {
+      await deleteSale(saleId);
+    }
   };
 
   return (
@@ -186,6 +192,12 @@ const SalesList: React.FC = () => {
                         >
                           <DollarSign size={16} />
                         </Link>
+                        <button
+                          onClick={() => handleDeleteSale(sale.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
