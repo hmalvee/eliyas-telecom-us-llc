@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Search, Plus, Calendar, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const SalesList: React.FC = () => {
   const { sales, customers, plans } = useApp();
@@ -78,12 +79,13 @@ const SalesList: React.FC = () => {
               />
             </div>
             
-            <button
+            <Link
+              to="/sales/new"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <Plus size={18} className="mr-1" />
               <span>New Sale</span>
-            </button>
+            </Link>
           </div>
         </div>
       </div>
