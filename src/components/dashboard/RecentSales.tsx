@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const RecentSales: React.FC = () => {
   const { sales, customers, plans } = useApp();
@@ -40,24 +41,68 @@ const RecentSales: React.FC = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0 }
+  };
   
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm h-full">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-white p-6 rounded-xl shadow-sm h-full hover:shadow-lg transition-shadow duration-300"
+    >
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Recent Sales</h3>
-        <a href="/sales" className="text-sm text-blue-600 hover:underline">View all</a>
+        <motion.h3
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-lg font-semibold text-gray-800"
+        >
+          Recent Sales
+        </motion.h3>
+        <motion.a
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          href="/sales"
+          className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+        >
+          View all
+        </motion.a>
       </div>
       
-      <div className="space-y-4">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-4"
+      >
         {recentSales.map(sale => {
           const customer = customers.find(c => c.id === sale.customerId);
           const plan = plans.find(p => p.id === sale.planId);
           
           return (
-            <div key={sale.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
+            <motion.div
+              key={sale.id}
+              variants={item}
+              className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            >
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-medium">
                     {customer?.name.charAt(0)}
                   </div>
                 </div>
@@ -75,11 +120,11 @@ const RecentSales: React.FC = () => {
                   {formatRelativeDate(sale.date)}
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

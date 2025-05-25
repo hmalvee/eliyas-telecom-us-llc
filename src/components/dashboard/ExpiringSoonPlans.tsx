@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Calendar, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ExpiringSoonPlans: React.FC = () => {
   const { customerPlans, customers, plans } = useApp();
@@ -32,17 +33,54 @@ const ExpiringSoonPlans: React.FC = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0 }
+  };
   
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm h-full">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-white p-6 rounded-xl shadow-sm h-full hover:shadow-lg transition-shadow duration-300"
+    >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Plans Expiring Soon</h3>
-        <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
+        <motion.h3
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-lg font-semibold text-gray-800"
+        >
+          Plans Expiring Soon
+        </motion.h3>
+        <motion.span
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded"
+        >
           {expiringSoonList.length} plans
-        </span>
+        </motion.span>
       </div>
       
-      <div className="space-y-4 max-h-[320px] overflow-y-auto">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-4 max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
+      >
         {expiringSoonList.length > 0 ? (
           expiringSoonList.map(plan => {
             const customer = customers.find(c => c.id === plan.customerId);
@@ -50,9 +88,13 @@ const ExpiringSoonPlans: React.FC = () => {
             const daysLeft = getDaysUntilExpiry(plan.endDate);
             
             return (
-              <div key={plan.id} className="flex items-center p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
+              <motion.div
+                key={plan.id}
+                variants={item}
+                className="flex items-center p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-medium">
                     {customer?.name.charAt(0)}
                   </div>
                 </div>
@@ -79,16 +121,21 @@ const ExpiringSoonPlans: React.FC = () => {
                     {daysLeft} {daysLeft === 1 ? 'day' : 'days'}
                   </span>
                 </div>
-              </div>
+              </motion.div>
             );
           })
         ) : (
-          <div className="text-center py-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-center py-6"
+          >
             <p className="text-gray-500">No plans expiring soon</p>
-          </div>
+          </motion.div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface StatCardProps {
   title: string;
@@ -52,29 +53,50 @@ const StatCard: React.FC<StatCardProps> = ({
   const classes = colorClasses[color];
 
   return (
-    <div className={`${classes.bg} rounded-xl p-5 h-full`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      whileHover={{ scale: 1.02 }}
+      className={`${classes.bg} rounded-xl p-5 h-full transform transition-all duration-200 hover:shadow-lg`}
+    >
       <div className="flex items-center">
-        <div className={`${classes.iconBg} p-2 rounded-lg ${classes.iconText}`}>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className={`${classes.iconBg} p-2 rounded-lg ${classes.iconText}`}
+        >
           {icon}
-        </div>
+        </motion.div>
         
         <div className="ml-auto">
           {change !== undefined && (
-            <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              change >= 0 ? classes.changePositive : classes.changeNegative
-            }`}>
+            <motion.div
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                change >= 0 ? classes.changePositive : classes.changeNegative
+              }`}
+            >
               {change >= 0 ? <ArrowUpRight size={14} className="mr-1" /> : <ArrowDownRight size={14} className="mr-1" />}
               {Math.abs(change)}% {changeText || ''}
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
       
-      <div className="mt-4">
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="mt-4"
+      >
         <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
         <p className="text-gray-900 text-2xl font-semibold mt-1">{value}</p>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
