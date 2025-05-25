@@ -27,7 +27,17 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
 
   const handleSave = async () => {
     try {
-      await updateSale(editedSale);
+      // Calculate new payment status based on amount and amount paid
+      const newPaymentStatus = 
+        editedSale.amountPaid >= editedSale.amount ? 'paid' :
+        editedSale.amountPaid > 0 ? 'partial' : 'unpaid';
+
+      const updatedSale = {
+        ...editedSale,
+        paymentStatus: newPaymentStatus
+      };
+
+      await updateSale(updatedSale);
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating sale:', error);
@@ -90,7 +100,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Amount</div>
+                <div className="text-sm text-gray-500">Total Amount</div>
                 {isEditing ? (
                   <input
                     type="number"
