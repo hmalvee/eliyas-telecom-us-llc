@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { format } from 'date-fns';
-import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, FileText } from 'lucide-react';
+import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, FileText, Mail } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from './InvoicePDF';
+import InvoiceDetailsModal from './InvoiceDetailsModal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -19,7 +20,7 @@ const InvoiceList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
 
   // Filter invoices based on all criteria
   const filteredInvoices = useMemo(() => {
@@ -94,18 +95,6 @@ const InvoiceList: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
       await deleteInvoice(invoiceId);
     }
-  };
-
-  // Handle status update
-  const handleStatusUpdate = async (invoiceId: string, status: string) => {
-    const invoice = invoices.find(i => i.id === invoiceId);
-    if (!invoice) return;
-
-    await updateInvoice({
-      ...invoice,
-      status: status as 'paid' | 'unpaid' | 'overdue'
-    });
-    setEditingInvoiceId(null);
   };
 
   // Status badge
@@ -273,7 +262,7 @@ const InvoiceList: React.FC = () => {
                 const sale = sales.find(s => s.id === invoice.saleId);
                 
                 return (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
+                  <tr key={invoice.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Calendar size={16} className="text-gray-400 mr-2" />
@@ -301,24 +290,15 @@ const InvoiceList: React.FC = () => {
                       {formatDate(invoice.dueDate)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {editingInvoiceId === invoice.id ? (
-                        <select
-                          value={invoice.status}
-                          onChange={(e) => handleStatusUpdate(invoice.id, e.target.value)}
-                          className="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                        >
-                          <option value="paid">Paid</option>
-                          <option value="unpaid">Unpaid</option>
-                          <option value="overdue">Overdue</option>
-                        </select>
-                      ) : (
-                        getStatusBadge(invoice.status)
-                      )}
+                      {getStatusBadge(invoice.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center space-x-3">
                         <button
-                          onClick={() => setEditingInvoiceId(editingInvoiceId === invoice.id ? null : invoice.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedInvoice(invoice);
+                          }}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           <Edit2 size={16} />
@@ -327,11 +307,15 @@ const InvoiceList: React.FC = () => {
                           document={<InvoicePDF invoice={invoice} customer={customer!} />}
                           fileName={`invoice-${invoice.id.slice(0, 8)}.pdf`}
                           className="text-blue-600 hover:text-blue-900"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <FileText size={16} />
                         </PDFDownloadLink>
                         <button
-                          onClick={() => handleDelete(invoice.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(invoice.id);
+                          }}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 size={16} />
@@ -360,7 +344,8 @@ const InvoiceList: React.FC = () => {
               <button
                 onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disable
+d:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -419,6 +404,14 @@ const InvoiceList: React.FC = () => {
           </div>
         )}
       </div>
+
+      {selectedInvoice && (
+        <InvoiceDetailsModal
+          invoice={selectedInvoice}
+          customer={customers.find(c => c.id === selectedInvoice.customerId)!}
+          onClose={() => setSelectedInvoice(null)}
+        />
+      )}
     </div>
   );
 };
