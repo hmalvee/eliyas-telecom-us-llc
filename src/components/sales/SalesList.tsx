@@ -119,15 +119,18 @@ const SalesList: React.FC = () => {
   };
   
   // Status badges
-  const getPaymentStatusBadge = (status: string) => {
+  const getPaymentStatusBadge = (status: string | undefined) => {
+    // If status is undefined, default to 'unpaid'
+    const currentStatus = status || 'unpaid';
+    
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
       'unpaid': 'bg-red-100 text-red-800'
     };
     
-    const colorClass = badgeColors[status as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
-    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+    const colorClass = badgeColors[currentStatus as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
+    const displayStatus = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
     
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
@@ -136,15 +139,18 @@ const SalesList: React.FC = () => {
     );
   };
 
-  const getOrderStatusBadge = (status: string) => {
+  const getOrderStatusBadge = (status: string | undefined) => {
+    // If status is undefined, default to 'processing'
+    const currentStatus = status || 'processing';
+    
     const badgeColors = {
       'delivered': 'bg-green-100 text-green-800',
       'canceled': 'bg-red-100 text-red-800',
       'processing': 'bg-blue-100 text-blue-800'
     };
     
-    const colorClass = badgeColors[status as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
-    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+    const colorClass = badgeColors[currentStatus as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
+    const displayStatus = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
     
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
@@ -162,8 +168,8 @@ const SalesList: React.FC = () => {
   const startEditing = (sale: Sale) => {
     setEditingSaleId(sale.id);
     setEditingValues({
-      paymentStatus: sale.paymentStatus,
-      orderStatus: sale.orderStatus,
+      paymentStatus: sale.paymentStatus || 'unpaid',
+      orderStatus: sale.orderStatus || 'processing',
       internalNotes: sale.internalNotes || ''
     });
   };
