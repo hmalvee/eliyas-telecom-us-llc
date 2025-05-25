@@ -17,6 +17,15 @@ const Dashboard: React.FC = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
+  // If dashboardStats is undefined, show loading state
+  if (!dashboardStats) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
