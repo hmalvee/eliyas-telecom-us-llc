@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -11,7 +11,7 @@ interface SortConfig {
 }
 
 const SalesList: React.FC = () => {
-  const { sales, customers, plans, deleteSale } = useApp();
+  const { sales, customers, plans, deleteSale, updateSale } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('all');
   const [selectedOrderStatus, setSelectedOrderStatus] = useState('all');
@@ -19,7 +19,7 @@ const SalesList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [selectedCustomer, setSelectedCustomer] = useState('all');
+  const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
   
   // Filter sales based on all criteria
   const filteredSales = useMemo(() => {
@@ -35,7 +35,6 @@ const SalesList: React.FC = () => {
       const matchesPaymentStatus = selectedPaymentStatus === 'all' || (sale.paymentStatus || 'unpaid') === selectedPaymentStatus;
       const matchesOrderStatus = selectedOrderStatus === 'all' || (sale.orderStatus || 'processing') === selectedOrderStatus;
       const matchesBusiness = selectedBusiness === 'all' || sale.businessType?.startsWith(selectedBusiness.toLowerCase());
-      const matchesCustomer = selectedCustomer === 'all' || sale.customerId === selectedCustomer;
       
       // Date range filtering
       const saleDate = new Date(sale.date);
@@ -46,9 +45,9 @@ const SalesList: React.FC = () => {
         (!startDate || saleDate >= startDate) &&
         (!endDate || saleDate <= endDate);
       
-      return matchesSearch && matchesPaymentStatus && matchesOrderStatus && matchesBusiness && matchesCustomer && matchesDateRange;
+      return matchesSearch && matchesPaymentStatus && matchesOrderStatus && matchesBusiness && matchesDateRange;
     });
-  }, [sales, customers, plans, searchQuery, selectedPaymentStatus, selectedOrderStatus, selectedBusiness, selectedCustomer, dateRange]);
+  }, [sales, customers, plans, searchQuery, selectedPaymentStatus, selectedOrderStatus, selectedBusiness, dateRange]);
   
   // Sort sales
   const sortedSales = useMemo(() => {
@@ -82,7 +81,7 @@ const SalesList: React.FC = () => {
   
   // Format date
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', { 
+    return new Intl.NumberFormat('en-US', { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
@@ -147,13 +146,24 @@ const SalesList: React.FC = () => {
     }
   };
 
+  const handleUpdateStatus = async (saleId: string, paymentStatus: string, orderStatus: string) => {
+    const sale = sales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    await updateSale({
+      ...sale,
+      paymentStatus: paymentStatus as 'paid' | 'partial' | 'unpaid',
+      orderStatus: orderStatus as 'delivered' | 'canceled' | 'processing'
+    });
+    setEditingSaleId(null);
+  };
+
   // Reset filters
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedPaymentStatus('all');
     setSelectedOrderStatus('all');
     setSelectedBusiness('all');
-    setSelectedCustomer('all');
     setDateRange({ start: '', end: '' });
     setCurrentPage(1);
   };
@@ -192,7 +202,7 @@ const SalesList: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
               <div className="flex gap-2">
@@ -267,26 +277,7 @@ const SalesList: React.FC = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-              <select
-                value={selectedCustomer}
-                onChange={(e) => {
-                  setSelectedCustomer(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="all">All Customers</option>
-                {customers.map(customer => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-end">
+            <div className="lg:col-span-4 flex justify-end">
               <button
                 onClick={resetFilters}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
@@ -337,7 +328,7 @@ const SalesList: React.FC = () => {
                   onClick={() => handleSort('amount')}
                 >
                   <div className="flex items-center">
-                    Total Amount
+                    Amount
                     {sortConfig.key === 'amount' && (
                       sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1" /> : <ArrowDown size={14} className="ml-1" />
                     )}
@@ -383,29 +374,47 @@ const SalesList: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{plan?.name}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(sale.amount)}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(sale.amount).replace('$', '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getPaymentStatusBadge(sale.paymentStatus)}
+                      {editingSaleId === sale.id ? (
+                        <select
+                          value={sale.paymentStatus}
+                          onChange={(e) => handleUpdateStatus(sale.id, e.target.value, sale.orderStatus)}
+                          className="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                        >
+                          <option value="paid">Paid</option>
+                          <option value="partial">Partial</option>
+                          <option value="unpaid">Unpaid</option>
+                        </select>
+                      ) : (
+                        getPaymentStatusBadge(sale.paymentStatus)
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getOrderStatusBadge(sale.orderStatus)}
+                      {editingSaleId === sale.id ? (
+                        <select
+                          value={sale.orderStatus}
+                          onChange={(e) => handleUpdateStatus(sale.id, sale.paymentStatus, e.target.value)}
+                          className="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                        >
+                          <option value="delivered">Delivered</option>
+                          <option value="canceled">Canceled</option>
+                          <option value="processing">Processing</option>
+                        </select>
+                      ) : (
+                        getOrderStatusBadge(sale.orderStatus)
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center space-x-3">
-                        <Link
-                          to={`/sales/${sale.id}/edit`}
+                        <button
+                          onClick={() => setEditingSaleId(editingSaleId === sale.id ? null : sale.id)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           <Edit2 size={16} />
-                        </Link>
-                        <Link
-                          to={`/sales/${sale.id}/payment`}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          <DollarSign size={16} />
-                        </Link>
+                        </button>
                         <button
                           onClick={() => handleDeleteSale(sale.id)}
                           className="text-red-600 hover:text-red-900"
