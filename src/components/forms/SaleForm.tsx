@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Plan } from '../../types';
@@ -37,6 +37,7 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
   const { customers, addSale } = useApp();
   const [business, setBusiness] = useState('telecom');
   const [isPartialPayment, setIsPartialPayment] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [telecomData, setTelecomData] = useState<TelecomFormData>({
     customerId: '',
@@ -62,6 +63,17 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     paymentMethod: 'card',
     notes: ''
   });
+
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(customer => {
+      const searchStr = searchQuery.toLowerCase();
+      return (
+        customer.name.toLowerCase().includes(searchStr) ||
+        customer.email.toLowerCase().includes(searchStr) ||
+        customer.phone.includes(searchStr)
+      );
+    });
+  }, [customers, searchQuery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,26 +133,41 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
         <label htmlFor="customer" className="block text-sm font-medium text-gray-700">
           Customer
         </label>
-        <select
-          id="customer"
-          required
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={business === 'telecom' ? telecomData.customerId : travelData.customerId}
-          onChange={(e) => {
-            if (business === 'telecom') {
-              setTelecomData(prev => ({ ...prev, customerId: e.target.value }));
-            } else {
-              setTravelData(prev => ({ ...prev, customerId: e.target.value }));
-            }
-          }}
-        >
-          <option value="">Select a customer</option>
-          {customers.map(customer => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search customer by name, email or phone"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              {filteredCustomers.map(customer => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none"
+                  onClick={() => {
+                    if (business === 'telecom') {
+                      setTelecomData(prev => ({ ...prev, customerId: customer.id }));
+                    } else {
+                      setTravelData(prev => ({ ...prev, customerId: customer.id }));
+                    }
+                    setSearchQuery('');
+                  }}
+                >
+                  <div className="font-medium">{customer.name}</div>
+                  <div className="text-sm text-gray-600">{customer.email}</div>
+                  <div className="text-sm text-gray-600">{customer.phone}</div>
+                </button>
+              ))}
+              {filteredCustomers.length === 0 && (
+                <div className="px-4 py-2 text-gray-500">No customers found</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {business === 'telecom' ? (
