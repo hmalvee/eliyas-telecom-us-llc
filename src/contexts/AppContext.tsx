@@ -98,6 +98,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         status: 'unpaid'
       };
       setSales(prev => [...prev, newSale]);
+      
+      // Automatically generate invoice for the new sale
+      await generateInvoice(newSale);
+      
       toast.success('Sale created successfully');
       return newSale;
     } catch (error) {
