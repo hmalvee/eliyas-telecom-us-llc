@@ -1,9 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
+
+interface SortConfig {
+  key: string;
+  direction: 'asc' | 'desc';
+}
 
 const SalesList: React.FC = () => {
   const { sales, customers, plans, deleteSale } = useApp();
@@ -11,8 +16,11 @@ const SalesList: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedBusiness, setSelectedBusiness] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedCustomer, setSelectedCustomer] = useState('all');
   
-  // Memoize filtered sales to prevent unnecessary recalculations
+  // Filter sales based on all criteria
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const customer = customers.find(c => c.id === sale.customerId);
@@ -27,15 +35,45 @@ const SalesList: React.FC = () => {
       
       const matchesStatus = selectedStatus === 'all' || sale.status === selectedStatus;
       const matchesBusiness = selectedBusiness === 'all' || sale.business === selectedBusiness;
+      const matchesCustomer = selectedCustomer === 'all' || sale.customerId === selectedCustomer;
       
-      return matchesSearch && matchesStatus && matchesBusiness;
+      // Date range filtering
+      const saleDate = new Date(sale.date);
+      const startDate = dateRange.start ? new Date(dateRange.start) : null;
+      const endDate = dateRange.end ? new Date(dateRange.end) : null;
+      
+      const matchesDateRange = 
+        (!startDate || saleDate >= startDate) &&
+        (!endDate || saleDate <= endDate);
+      
+      return matchesSearch && matchesStatus && matchesBusiness && matchesCustomer && matchesDateRange;
     });
-  }, [sales, customers, plans, searchQuery, selectedStatus, selectedBusiness]);
+  }, [sales, customers, plans, searchQuery, selectedStatus, selectedBusiness, selectedCustomer, dateRange]);
   
-  // Memoize sorted sales
+  // Sort sales
   const sortedSales = useMemo(() => {
-    return [...filteredSales].sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [filteredSales]);
+    const sorted = [...filteredSales].sort((a, b) => {
+      switch (sortConfig.key) {
+        case 'date':
+          return sortConfig.direction === 'asc' 
+            ? a.date.getTime() - b.date.getTime()
+            : b.date.getTime() - a.date.getTime();
+        case 'customer':
+          const customerA = customers.find(c => c.id === a.customerId)?.name || '';
+          const customerB = customers.find(c => c.id === b.customerId)?.name || '';
+          return sortConfig.direction === 'asc'
+            ? customerA.localeCompare(customerB)
+            : customerB.localeCompare(customerA);
+        case 'amount':
+          return sortConfig.direction === 'asc'
+            ? a.amount - b.amount
+            : b.amount - a.amount;
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [filteredSales, sortConfig]);
 
   // Calculate pagination
   const totalPages = Math.ceil(sortedSales.length / ITEMS_PER_PAGE);
@@ -59,15 +97,17 @@ const SalesList: React.FC = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
+  // Handle sort
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
   
   // Status badge
   const getStatusBadge = (status: string) => {
-    if (!status) return (
-      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-        Unknown
-      </span>
-    );
-
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
@@ -92,6 +132,16 @@ const SalesList: React.FC = () => {
     }
   };
 
+  // Reset filters
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedStatus('all');
+    setSelectedBusiness('all');
+    setSelectedCustomer('all');
+    setDateRange({ start: '', end: '' });
+    setCurrentPage(1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm">
@@ -110,7 +160,7 @@ const SalesList: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
-                    setCurrentPage(1); // Reset to first page on search
+                    setCurrentPage(1);
                   }}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
@@ -126,35 +176,93 @@ const SalesList: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-4 flex gap-4">
-            <select
-              value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                setCurrentPage(1); // Reset to first page on filter change
-              }}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="not-delivered">Not Delivered</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="partial">Partial</option>
-              <option value="unpaid">Unpaid</option>
-            </select>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => {
+                    setDateRange(prev => ({ ...prev, start: e.target.value }));
+                    setCurrentPage(1);
+                  }}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => {
+                    setDateRange(prev => ({ ...prev, end: e.target.value }));
+                    setCurrentPage(1);
+                  }}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
 
-            <select
-              value={selectedBusiness}
-              onChange={(e) => {
-                setSelectedBusiness(e.target.value);
-                setCurrentPage(1); // Reset to first page on filter change
-              }}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="all">All Business</option>
-              <option value="telecom">Eliyas Telecom</option>
-              <option value="travel">US Tours And Travels</option>
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="paid">Paid</option>
+                <option value="partial">Partial</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="not-delivered">Not Delivered</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business</label>
+              <select
+                value={selectedBusiness}
+                onChange={(e) => {
+                  setSelectedBusiness(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="all">All Business</option>
+                <option value="telecom">Eliyas Telecom</option>
+                <option value="travel">US Tours And Travels</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+              <select
+                value={selectedCustomer}
+                onChange={(e) => {
+                  setSelectedCustomer(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="all">All Customers</option>
+                {customers.map(customer => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Reset Filters
+              </button>
+            </div>
           </div>
         </div>
         
@@ -162,11 +270,29 @@ const SalesList: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center">
+                    Date
+                    {sortConfig.key === 'date' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1" /> : <ArrowDown size={14} className="ml-1" />
+                    )}
+                  </div>
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('customer')}
+                >
+                  <div className="flex items-center">
+                    Customer
+                    {sortConfig.key === 'customer' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1" /> : <ArrowDown size={14} className="ml-1" />
+                    )}
+                  </div>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Business
@@ -174,8 +300,17 @@ const SalesList: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Plan
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Amount
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('amount')}
+                >
+                  <div className="flex items-center">
+                    Total Amount
+                    {sortConfig.key === 'amount' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1" /> : <ArrowDown size={14} className="ml-1" />
+                    )}
+                  </div>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
