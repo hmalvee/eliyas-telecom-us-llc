@@ -1,17 +1,16 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-import { Invoice, Customer } from '../../types';
+import { Invoice, Customer, Settings } from '../../types';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
-import { useApp } from '../../contexts/AppContext';
 
 interface InvoicePDFProps {
   invoice: Invoice;
   customer: Customer;
+  settings: Settings;
 }
 
-const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, customer }) => {
-  const { settings } = useApp();
+const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, customer, settings }) => {
   const [qrCodeUrl, setQrCodeUrl] = React.useState<string>('');
 
   // Determine which business info to use based on invoice type
