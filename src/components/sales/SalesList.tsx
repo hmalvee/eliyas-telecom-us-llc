@@ -79,20 +79,35 @@ const SalesList: React.FC = () => {
   const paginatedSales = sortedSales.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   // Format date
-  const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return new Intl.DateTimeFormat('en-US', options).format(date);
-  };
+  const formatDate = (date: Date) => format(date, 'MMM dd, yyyy');
 
   // Format currency
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+
+  // Get order type display name
+  const getOrderType = (businessType: string | undefined) => {
+    switch (businessType) {
+      case 'telecom_recharge':
+        return 'Recharge';
+      case 'telecom_phone':
+        return 'Phone Sale';
+      case 'telecom_service':
+        return 'Service';
+      case 'telecom_other':
+        return 'Others';
+      case 'travel_domestic':
+        return 'Domestic Travel';
+      case 'travel_international':
+        return 'International Travel';
+      case 'travel_visa':
+        return 'Visa Processing';
+      case 'travel_custom':
+        return 'Custom Package';
+      default:
+        return 'Unknown';
+    }
+  };
 
   // Handle sort
   const handleSort = (key: string) => {
@@ -314,6 +329,9 @@ const SalesList: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Business
                 </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Order Type
+                </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -365,6 +383,9 @@ const SalesList: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {sale.businessType?.startsWith('telecom') ? 'Eliyas Telecom' : 'US Tours And Travels'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {getOrderType(sale.businessType)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(sale.amount)}
@@ -421,7 +442,7 @@ const SalesList: React.FC = () => {
               
               {paginatedSales.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
                     {searchQuery 
                       ? `No sales found matching "${searchQuery}"`
                       : 'No sales recorded yet.'}
