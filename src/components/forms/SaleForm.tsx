@@ -12,7 +12,6 @@ const BUSINESS_TYPES = [
   { name: 'Eliyas Telecom US LLC', types: [
     { id: 'telecom_recharge', label: 'Recharge' },
     { id: 'telecom_phone', label: 'Phone Sale' },
-    { id: 'telecom_accessory', label: 'Accessories Sale' },
     { id: 'telecom_service', label: 'Service' },
     { id: 'telecom_other', label: 'Others' }
   ]},
@@ -58,13 +57,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     price: 0
   });
   
-  // Accessory sale specific state
-  const [accessoryData, setAccessoryData] = useState({
-    name: '',
-    quantity: 1,
-    unitPrice: 0
-  });
-  
   // Service specific state
   const [serviceData, setServiceData] = useState({
     type: SERVICE_TYPES[0],
@@ -81,15 +73,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     customerFare: 0,
     profit: 0,
     status: 'pending'
-  });
-  
-  // Visa processing specific state
-  const [visaData, setVisaData] = useState({
-    country: '',
-    visaType: '',
-    processingFee: 0,
-    ourCost: 0,
-    customerCost: 0
   });
   
   // Common payment data
@@ -159,15 +142,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
           };
           break;
 
-        case 'telecom_accessory':
-          const accessoryTotal = accessoryData.quantity * accessoryData.unitPrice;
-          saleData = {
-            ...saleData,
-            amount: accessoryTotal,
-            notes: `${paymentData.notes}\nItem: ${accessoryData.name}\nQuantity: ${accessoryData.quantity}`
-          };
-          break;
-
         case 'telecom_service':
           saleData = {
             ...saleData,
@@ -187,12 +161,29 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
           break;
 
         case 'travel_visa':
-          const visaProfit = visaData.customerCost - visaData.ourCost;
+          const visaProfit = travelData.customerFare - travelData.ourFare;
           saleData = {
             ...saleData,
-            amount: visaData.customerCost,
+            amount: travelData.customerFare,
             profit: visaProfit,
-            notes: `${paymentData.notes}\nCountry: ${visaData.country}\nVisa Type: ${visaData.visaType}`
+            notes: `${paymentData.notes}\nVisa Processing\nRoute: ${travelData.route}`
+          };
+          break;
+
+        case 'travel_custom':
+          saleData = {
+            ...saleData,
+            amount: travelData.customerFare,
+            profit: travelData.profit,
+            notes: `${paymentData.notes}\nCustom Package\nDetails: ${paymentData.notes}`
+          };
+          break;
+
+        case 'telecom_other':
+          saleData = {
+            ...saleData,
+            amount: paymentData.amount,
+            notes: paymentData.notes
           };
           break;
       }
@@ -201,11 +192,18 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
       saleData.amountPaid = paid;
       saleData.status = status;
 
-      await addSale(saleData);
+      const sale = await addSale(saleData);
+      
       if (onSuccess) {
         onSuccess();
       }
-      navigate('/sales');
+
+      // Redirect based on business type
+      if (businessType === 'telecom_recharge') {
+        navigate('/recharge-history');
+      } else {
+        navigate('/sales');
+      }
     } catch (error) {
       console.error('Error creating sale:', error);
     }
@@ -449,42 +447,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
             </>
           )}
 
-          {/* Accessory Sale Fields */}
-          {businessType === 'telecom_accessory' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Item Name</label>
-                <input
-                  type="text"
-                  value={accessoryData.name}
-                  onChange={(e) => setAccessoryData({ ...accessoryData, name: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={accessoryData.quantity}
-                  onChange={(e) => setAccessoryData({ ...accessoryData, quantity: parseInt(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Unit Price</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={accessoryData.unitPrice}
-                  onChange={(e) => setAccessoryData({ ...accessoryData, unitPrice: parseFloat(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </>
-          )}
-
           {/* Service Fields */}
           {businessType === 'telecom_service' && (
             <>
@@ -631,63 +593,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
                   <option value="issued">Ticket Issued</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
-              </div>
-            </>
-          )}
-
-          {/* Visa Processing Fields */}
-          {businessType === 'travel_visa' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Country</label>
-                <input
-                  type="text"
-                  value={visaData.country}
-                  onChange={(e) => setVisaData({ ...visaData, country: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Visa Type</label>
-                <input
-                  type="text"
-                  value={visaData.visaType}
-                  onChange={(e) => setVisaData({ ...visaData, visaType: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Processing Fee</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={visaData.processingFee}
-                  onChange={(e) => setVisaData({ ...visaData, processingFee: parseFloat(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Our Cost</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={visaData.ourCost}
-                  onChange={(e) => setVisaData({ ...visaData, ourCost: parseFloat(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Customer Cost</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={visaData.customerCost}
-                  onChange={(e) => setVisaData({ ...visaData, customerCost: parseFloat(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
               </div>
             </>
           )}
