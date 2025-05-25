@@ -128,7 +128,7 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     if (!selectedCustomer) return;
 
     try {
-      let amount = calculateTotalAmount();
+      const amount = calculateTotalAmount();
       let finalNotes = notes;
 
       // Set amount based on business type
