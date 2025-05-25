@@ -10,28 +10,25 @@ const ExpiringSoonPlans: React.FC = () => {
   
   // Find plans expiring in the next 7 days
   const expiringSoonList = customerPlans.filter(plan => {
-    const endDate = new Date(plan.endDate);
-    const daysUntilExpiry = Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilExpiry = Math.floor((plan.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return plan.status === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
   });
   
   // Sort by expiration date (ascending)
-  expiringSoonList.sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+  expiringSoonList.sort((a, b) => a.endDate.getTime() - b.endDate.getTime());
   
   // Format date
-  const formatDate = (date: Date | string) => {
-    const dateObj = new Date(date);
+  const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
-    }).format(dateObj);
+    }).format(date);
   };
   
   // Calculate days until expiry
-  const getDaysUntilExpiry = (endDate: Date | string) => {
-    const endDateTime = new Date(endDate).getTime();
-    const diffTime = endDateTime - today.getTime();
+  const getDaysUntilExpiry = (endDate: Date) => {
+    const diffTime = endDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
