@@ -55,9 +55,12 @@ const SalesList: React.FC = () => {
       'unpaid': 'bg-red-100 text-red-800'
     };
     
+    const colorClass = badgeColors[sale.status] ?? 'bg-gray-100 text-gray-800';
+    const displayStatus = sale.status?.charAt(0).toUpperCase() + (sale.status?.slice(1) ?? '') || 'Unknown';
+    
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${badgeColors[sale.status]}`}>
-        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
+        {displayStatus}
       </span>
     );
   };
