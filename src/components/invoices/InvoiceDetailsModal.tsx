@@ -6,6 +6,7 @@ import { PDFViewer } from '@react-pdf/renderer';
 import InvoicePDF from './InvoicePDF';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 
 interface InvoiceDetailsModalProps {
   invoice: Invoice;
