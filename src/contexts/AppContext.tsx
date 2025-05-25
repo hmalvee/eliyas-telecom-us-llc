@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Sale, Invoice, Customer, CustomerNumber, DashboardStats } from '../types';
+import { Sale, Invoice, Customer, CustomerNumber, DashboardStats, CustomerPlan, Plan } from '../types';
 import { dashboardStats as mockDashboardStats } from '../data/mockData';
 
 interface AppContextType {
@@ -8,6 +8,8 @@ interface AppContextType {
   invoices: Invoice[];
   customers: Customer[];
   customerNumbers: CustomerNumber[];
+  customerPlans: CustomerPlan[];
+  plans: Plan[];
   dashboardStats: DashboardStats;
   addSale: (saleData: Omit<Sale, 'id' | 'invoiceNumber'>) => Promise<Sale>;
   generateInvoice: (sale: Sale) => Promise<void>;
@@ -20,6 +22,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>([]);
+  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>(mockDashboardStats);
 
   const addSale = async (saleData: Omit<Sale, 'id' | 'invoiceNumber'>): Promise<Sale> => {
@@ -107,6 +111,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     invoices,
     customers,
     customerNumbers,
+    customerPlans,
+    plans,
     dashboardStats,
     addSale,
     generateInvoice
