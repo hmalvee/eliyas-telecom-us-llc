@@ -4,7 +4,7 @@ import StatCard from '../components/dashboard/StatCard';
 import SalesChart from '../components/dashboard/SalesChart';
 import ExpiringSoonPlans from '../components/dashboard/ExpiringSoonPlans';
 import RecentSales from '../components/dashboard/RecentSales';
-import { Users, ShoppingCart, Package, BellRing, DollarSign } from 'lucide-react';
+import { Users, Package, BellRing, DollarSign } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const { dashboardStats } = useApp();
