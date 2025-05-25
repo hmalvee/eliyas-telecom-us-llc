@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
 import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2 } from 'lucide-react';
@@ -9,28 +9,30 @@ const SalesList: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedBusiness, setSelectedBusiness] = useState('all');
   
-  // Filter sales based on search query, status and business
-  const filteredSales = sales.filter(sale => {
-    const customer = customers.find(c => c.id === sale.customerId);
-    const plan = plans.find(p => p.id === sale.planId);
-    
-    if (!customer || !plan) return false;
-    
-    const matchesSearch = 
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sale.amount.toString().includes(searchQuery);
+  // Memoize filtered sales to prevent unnecessary recalculations
+  const filteredSales = useMemo(() => {
+    return sales.filter(sale => {
+      const customer = customers.find(c => c.id === sale.customerId);
+      const plan = plans.find(p => p.id === sale.planId);
       
-    const matchesStatus = selectedStatus === 'all' || sale.status === selectedStatus;
-    const matchesBusiness = selectedBusiness === 'all' || sale.business === selectedBusiness;
-    
-    return matchesSearch && matchesStatus && matchesBusiness;
-  });
+      if (!customer || !plan) return false;
+      
+      const matchesSearch = 
+        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sale.amount.toString().includes(searchQuery);
+      
+      const matchesStatus = selectedStatus === 'all' || sale.status === selectedStatus;
+      const matchesBusiness = selectedBusiness === 'all' || sale.business === selectedBusiness;
+      
+      return matchesSearch && matchesStatus && matchesBusiness;
+    });
+  }, [sales, customers, plans, searchQuery, selectedStatus, selectedBusiness]);
   
-  // Sort sales by date (most recent first)
-  const sortedSales = [...filteredSales].sort((a, b) => 
-    b.date.getTime() - a.date.getTime()
-  );
+  // Memoize sorted sales
+  const sortedSales = useMemo(() => {
+    return [...filteredSales].sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [filteredSales]);
   
   // Format date
   const formatDate = (date: Date) => {
@@ -51,16 +53,7 @@ const SalesList: React.FC = () => {
   };
   
   // Status badge
-  const getStatusBadge = (status: string | undefined) => {
-    // Return a default badge if status is undefined or not a string
-    if (typeof status !== 'string') {
-      return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-          Unknown
-        </span>
-      );
-    }
-
+  const getStatusBadge = (status: string) => {
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
