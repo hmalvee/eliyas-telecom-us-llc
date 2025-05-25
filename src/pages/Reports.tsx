@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, isWithinInterval, subDays, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isWithinInterval, parseISO } from 'date-fns';
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -10,7 +10,7 @@ import { PDFReport } from '../components/reports/PDFReport';
 const Reports: React.FC = () => {
   const { sales, customers } = useApp();
   const [businessType, setBusinessType] = useState<'all' | 'telecom' | 'travel'>('all');
-  const [timeRange, setTimeRange] = useState<'1m' | '3m' | '6m' | '1y'>('1m');
+  const [timeRange, setTimeRange] = useState<'1d' | '7d' | '30d' | '90d'>('30d');
   const [customDateRange, setCustomDateRange] = useState({
     start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
     end: format(new Date(), 'yyyy-MM-dd')
@@ -33,7 +33,12 @@ const Reports: React.FC = () => {
     }
 
     const end = new Date();
-    const start = subMonths(end, timeRange === '1m' ? 1 : timeRange === '3m' ? 3 : timeRange === '6m' ? 6 : 12);
+    const start = subDays(end, 
+      timeRange === '1d' ? 1 : 
+      timeRange === '7d' ? 7 : 
+      timeRange === '30d' ? 30 : 
+      90
+    );
     return { start, end };
   };
 
@@ -78,7 +83,12 @@ const Reports: React.FC = () => {
     // Calculate growth rates
     const previousPeriodSales = sales.filter(sale => {
       const { start, end } = getDateRange();
-      const previousStart = subMonths(start, timeRange === '1m' ? 1 : timeRange === '3m' ? 3 : timeRange === '6m' ? 6 : 12);
+      const previousStart = subDays(start, 
+        timeRange === '1d' ? 1 : 
+        timeRange === '7d' ? 7 : 
+        timeRange === '30d' ? 30 : 
+        90
+      );
       return isWithinInterval(sale.date, { start: previousStart, end: start });
     });
     
@@ -164,7 +174,7 @@ const Reports: React.FC = () => {
               </div>
               
               <div className="flex space-x-2">
-                {(['1m', '3m', '6m', '1y'] as const).map((range) => (
+                {(['1d', '7d', '30d', '90d'] as const).map((range) => (
                   <motion.button
                     key={range}
                     whileHover={{ scale: 1.05 }}
