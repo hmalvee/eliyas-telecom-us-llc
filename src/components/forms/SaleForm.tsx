@@ -38,10 +38,15 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
   
   // Basic form state
   const [businessType, setBusinessType] = useState('telecom_recharge');
-  const [isPartialPayment, setIsPartialPayment] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+  
+  // Payment and status state
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'partial' | 'unpaid'>('paid');
+  const [orderStatus, setOrderStatus] = useState<'delivered' | 'canceled' | 'processing'>('processing');
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('card');
   
   // Recharge specific state
   const [selectedNumber, setSelectedNumber] = useState<CustomerNumber | null>(null);
@@ -71,16 +76,11 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     route: '',
     ourFare: 0,
     customerFare: 0,
-    profit: 0,
-    status: 'pending'
+    profit: 0
   });
   
-  // Common payment data
-  const [paymentData, setPaymentData] = useState({
-    amount: 0,
-    method: 'card',
-    notes: ''
-  });
+  // Notes
+  const [notes, setNotes] = useState('');
 
   // Filter customers based on search
   const filteredCustomers = useMemo(() => {
@@ -100,59 +100,48 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     return allCustomerNumbers.filter(n => n.customerId === selectedCustomer.id);
   }, [selectedCustomer, allCustomerNumbers]);
 
-  // Calculate total and due amounts
-  const calculateAmounts = (total: number) => {
-    if (isPartialPayment) {
-      const due = total - paymentData.amount;
-      return { paid: paymentData.amount, due, status: 'partial' };
-    }
-    return { paid: total, due: 0, status: 'paid' };
-  };
-
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return;
 
     try {
       let amount = 0;
-      let notes = paymentData.notes;
+      let finalNotes = notes;
 
       // Set amount based on business type
       switch (businessType) {
         case 'telecom_recharge':
           amount = rechargeAmount;
-          notes = `${notes}\nNumber: ${useOtherNumber ? otherNumber : selectedNumber?.phoneNumber || selectedCustomer.phone}`;
+          finalNotes = `${notes}\nNumber: ${useOtherNumber ? otherNumber : selectedNumber?.phoneNumber || selectedCustomer.phone}`;
           break;
         case 'telecom_phone':
           amount = phoneData.price;
-          notes = `${notes}\nBrand: ${phoneData.brand}\nModel: ${phoneData.model}\nIMEI: ${phoneData.imei}`;
+          finalNotes = `${notes}\nBrand: ${phoneData.brand}\nModel: ${phoneData.model}\nIMEI: ${phoneData.imei}`;
           break;
         case 'telecom_service':
           amount = serviceData.cost;
-          notes = `${notes}\nService: ${serviceData.type === 'Other' ? serviceData.customType : serviceData.type}\nDescription: ${serviceData.description}`;
+          finalNotes = `${notes}\nService: ${serviceData.type === 'Other' ? serviceData.customType : serviceData.type}\nDescription: ${serviceData.description}`;
           break;
         case 'travel_domestic':
         case 'travel_international':
           amount = travelData.customerFare;
-          notes = `${notes}\nRoute: ${travelData.route}\nStatus: ${travelData.status}`;
+          finalNotes = `${notes}\nRoute: ${travelData.route}`;
           break;
         case 'telecom_other':
-          amount = paymentData.amount;
+          amount = paymentAmount;
           break;
       }
-
-      const { paid, status } = calculateAmounts(amount);
 
       const saleData = {
         customerId: selectedCustomer.id,
         customerNumberId: selectedNumber?.id,
         amount,
-        amountPaid: paid,
+        amountPaid: paymentStatus === 'paid' ? amount : paymentStatus === 'partial' ? paymentAmount : 0,
         date: new Date(),
-        paymentMethod: paymentData.method,
-        status,
-        notes,
+        paymentMethod,
+        paymentStatus,
+        orderStatus,
+        notes: finalNotes,
         businessType,
         profit: travelData.profit || 0
       };
@@ -459,33 +448,6 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
             </>
           )}
 
-          {/* Others Fields */}
-          {businessType === 'telecom_other' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
-                  value={paymentData.notes}
-                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
-                  rows={3}
-                  placeholder="Enter details about the sale..."
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Amount</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paymentData.amount}
-                  onChange={(e) => setPaymentData({ ...paymentData, amount: parseFloat(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </>
-          )}
-
           {/* Travel Fields */}
           {(businessType === 'travel_domestic' || businessType === 'travel_international') && (
             <>
@@ -544,100 +506,41 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50"
                 />
               </div>
+            </>
+          )}
+
+          {/* Status Section */}
+          <div className="border-t border-gray-200 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-gray-700">Payment Status</label>
                 <select
-                  value={travelData.status}
-                  onChange={(e) => setTravelData({ ...travelData, status: e.target.value })}
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value as 'paid' | 'partial' | 'unpaid')}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="issued">Ticket Issued</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="paid">Paid</option>
+                  <option value="partial">Partial</option>
+                  <option value="unpaid">Unpaid</option>
                 </select>
               </div>
-            </>
-          )}
-
-          {/* Custom Package Fields */}
-          {businessType === 'travel_custom' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Package Description</label>
-                <textarea
-                  value={paymentData.notes}
-                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
-                  rows={4}
-                  placeholder="Enter package details, inclusions, special requirements..."
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Our Cost</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={travelData.ourFare}
-                  onChange={(e) => {
-                    const ourFare = parseFloat(e.target.value);
-                    setTravelData({
-                      ...travelData,
-                      ourFare,
-                      profit: travelData.customerFare - ourFare
-                    });
-                  }}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Customer Cost</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={travelData.customerFare}
-                  onChange={(e) => {
-                    const customerFare = parseFloat(e.target.value);
-                    setTravelData({
-                      ...travelData,
-                      customerFare,
-                      profit: customerFare - travelData.ourFare
-                    });
-                  }}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Profit</label>
-                <input
-                  type="number"
-                  readOnly
-                  value={travelData.profit}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Payment Section */}
-          <div className="border-t border-gray-200 pt-6">
-            <div>
-              <div className="flex items-center mb-4">
-                <input
-                  type="checkbox"
-                  id="partialPayment"
-                  checked={isPartialPayment}
-                  onChange={(e) => setIsPartialPayment(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="partialPayment" className="ml-2 block text-sm text-gray-900">
-                  Partial Payment
-                </label>
-              </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700">Order Status</label>
+                <select
+                  value={orderStatus}
+                  onChange={(e) => setOrderStatus(e.target.value as 'delivered' | 'canceled' | 'processing')}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="delivered">Delivered</option>
+                  <option value="canceled">Canceled</option>
+                  <option value="processing">Processing</option>
+                </select>
+              </div>
+            </div>
+
+            {paymentStatus === 'partial' && (
+              <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700">
                   Payment Amount
                 </label>
@@ -645,38 +548,38 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={paymentData.amount}
-                  onChange={(e) => setPaymentData({ ...paymentData, amount: parseFloat(e.target.value) })}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value))}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
+            )}
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Payment Method
-                </label>
-                <select
-                  value={paymentData.method}
-                  onChange={(e) => setPaymentData({ ...paymentData, method: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="card">Card</option>
-                  <option value="cash">Cash</option>
-                  <option value="online">Online</option>
-                </select>
-              </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Payment Method
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'online')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="card">Card</option>
+                <option value="cash">Cash</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Notes
-                </label>
-                <textarea
-                  value={paymentData.notes}
-                  onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
             </div>
           </div>
 
