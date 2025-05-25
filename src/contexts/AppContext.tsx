@@ -40,6 +40,8 @@ interface AppContextType {
   updateCustomerPlan: (customerPlan: CustomerPlan) => Promise<void>;
   addPayment: (payment: Payment) => Promise<void>;
   updateCustomerNumber: (number: CustomerNumber) => Promise<void>;
+  deleteInvoice: (id: string) => Promise<void>;
+  updateInvoice: (invoice: Invoice) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -295,6 +297,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Delete an invoice
+  const deleteInvoice = async (id: string) => {
+    try {
+      setInvoices(prev => prev.filter(i => i.id !== id));
+      toast.success('Invoice deleted successfully');
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast.error('Failed to delete invoice');
+      throw error;
+    }
+  };
+
+  // Update an invoice
+  const updateInvoice = async (invoice: Invoice) => {
+    try {
+      setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
+      toast.success('Invoice updated successfully');
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice');
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       customers,
@@ -317,6 +343,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateCustomerPlan,
       addPayment,
       updateCustomerNumber,
+      deleteInvoice,
+      updateInvoice,
     }}>
       {children}
     </AppContext.Provider>
