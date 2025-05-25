@@ -13,7 +13,8 @@ interface SortConfig {
 const SalesList: React.FC = () => {
   const { sales, customers, plans, deleteSale } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('all');
+  const [selectedOrderStatus, setSelectedOrderStatus] = useState('all');
   const [selectedBusiness, setSelectedBusiness] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
@@ -26,15 +27,14 @@ const SalesList: React.FC = () => {
       const customer = customers.find(c => c.id === sale.customerId);
       const plan = plans.find(p => p.id === sale.planId);
       
-      if (!customer || !plan) return false;
-      
       const matchesSearch = 
-        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sale.amount.toString().includes(searchQuery);
       
-      const matchesStatus = selectedStatus === 'all' || sale.status === selectedStatus;
-      const matchesBusiness = selectedBusiness === 'all' || sale.business === selectedBusiness;
+      const matchesPaymentStatus = selectedPaymentStatus === 'all' || sale.paymentStatus === selectedPaymentStatus;
+      const matchesOrderStatus = selectedOrderStatus === 'all' || sale.orderStatus === selectedOrderStatus;
+      const matchesBusiness = selectedBusiness === 'all' || sale.businessType?.startsWith(selectedBusiness.toLowerCase());
       const matchesCustomer = selectedCustomer === 'all' || sale.customerId === selectedCustomer;
       
       // Date range filtering
@@ -46,9 +46,9 @@ const SalesList: React.FC = () => {
         (!startDate || saleDate >= startDate) &&
         (!endDate || saleDate <= endDate);
       
-      return matchesSearch && matchesStatus && matchesBusiness && matchesCustomer && matchesDateRange;
+      return matchesSearch && matchesPaymentStatus && matchesOrderStatus && matchesBusiness && matchesCustomer && matchesDateRange;
     });
-  }, [sales, customers, plans, searchQuery, selectedStatus, selectedBusiness, selectedCustomer, dateRange]);
+  }, [sales, customers, plans, searchQuery, selectedPaymentStatus, selectedOrderStatus, selectedBusiness, selectedCustomer, dateRange]);
   
   // Sort sales
   const sortedSales = useMemo(() => {
@@ -107,25 +107,32 @@ const SalesList: React.FC = () => {
   };
   
   // Status badge
-  const getStatusBadge = (status: string | undefined) => {
-    if (!status) {
-      return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-          Unknown
-        </span>
-      );
-    }
-
+  const getPaymentStatusBadge = (status: string) => {
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
       'partial': 'bg-yellow-100 text-yellow-800',
-      'unpaid': 'bg-red-100 text-red-800',
-      'not-delivered': 'bg-purple-100 text-purple-800',
-      'pending': 'bg-blue-100 text-blue-800'
+      'unpaid': 'bg-red-100 text-red-800'
     };
     
     const colorClass = badgeColors[status as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
-    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ');
+    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+    
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
+        {displayStatus}
+      </span>
+    );
+  };
+
+  const getOrderStatusBadge = (status: string) => {
+    const badgeColors = {
+      'delivered': 'bg-green-100 text-green-800',
+      'canceled': 'bg-red-100 text-red-800',
+      'processing': 'bg-blue-100 text-blue-800'
+    };
+    
+    const colorClass = badgeColors[status as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
+    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
     
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
@@ -143,7 +150,8 @@ const SalesList: React.FC = () => {
   // Reset filters
   const resetFilters = () => {
     setSearchQuery('');
-    setSelectedStatus('all');
+    setSelectedPaymentStatus('all');
+    setSelectedOrderStatus('all');
     setSelectedBusiness('all');
     setSelectedCustomer('all');
     setDateRange({ start: '', end: '' });
@@ -184,7 +192,7 @@ const SalesList: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
               <div className="flex gap-2">
@@ -210,11 +218,11 @@ const SalesList: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
               <select
-                value={selectedStatus}
+                value={selectedPaymentStatus}
                 onChange={(e) => {
-                  setSelectedStatus(e.target.value);
+                  setSelectedPaymentStatus(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
@@ -223,8 +231,23 @@ const SalesList: React.FC = () => {
                 <option value="paid">Paid</option>
                 <option value="partial">Partial</option>
                 <option value="unpaid">Unpaid</option>
-                <option value="not-delivered">Not Delivered</option>
-                <option value="pending">Pending</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+              <select
+                value={selectedOrderStatus}
+                onChange={(e) => {
+                  setSelectedOrderStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="delivered">Delivered</option>
+                <option value="canceled">Canceled</option>
+                <option value="processing">Processing</option>
               </select>
             </div>
 
@@ -321,7 +344,10 @@ const SalesList: React.FC = () => {
                   </div>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Payment Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Order Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -352,7 +378,7 @@ const SalesList: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {sale.business === 'telecom' ? 'Eliyas Telecom' : 'US Tours And Travels'}
+                      {sale.businessType?.startsWith('telecom') ? 'Eliyas Telecom' : 'US Tours And Travels'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{plan?.name}</div>
@@ -361,7 +387,10 @@ const SalesList: React.FC = () => {
                       {formatCurrency(sale.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(sale.status)}
+                      {getPaymentStatusBadge(sale.paymentStatus)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getOrderStatusBadge(sale.orderStatus)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center space-x-3">
@@ -391,7 +420,7 @@ const SalesList: React.FC = () => {
               
               {paginatedSales.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
                     {searchQuery 
                       ? `No sales found matching "${searchQuery}"`
                       : 'No sales recorded yet.'}

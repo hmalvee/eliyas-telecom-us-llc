@@ -54,7 +54,8 @@ export interface Sale {
   amountPaid: number;
   date: Date;
   paymentMethod: 'cash' | 'card' | 'online';
-  status: 'paid' | 'partial' | 'unpaid' | 'not-delivered' | 'pending';
+  paymentStatus: 'paid' | 'partial' | 'unpaid';
+  orderStatus: 'delivered' | 'canceled' | 'processing';
   notes: string;
   businessType?: 'telecom_recharge' | 'telecom_phone' | 'telecom_service' | 'telecom_other' | 'travel_domestic' | 'travel_international' | 'travel_visa' | 'travel_custom';
   customerNumberId?: string;
