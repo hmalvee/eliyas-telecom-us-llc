@@ -384,7 +384,7 @@ const SalesList: React.FC = () => {
                       onClick={() => startEditing(sale)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {sale.invoiceNumber}
+                        #{sale.invoiceNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
