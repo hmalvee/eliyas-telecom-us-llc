@@ -73,6 +73,15 @@ export interface Invoice {
   tax: number;
   total: number;
   status: 'paid' | 'unpaid' | 'overdue';
+  currency: string;
+  exchangeRate: number;
+  template: 'standard' | 'professional' | 'minimal';
+  notes: string[];
+  terms: string[];
+  paymentSchedule?: PaymentSchedule[];
+  signature?: string;
+  qrCode?: string;
+  customFields: { [key: string]: string };
 }
 
 export interface InvoiceItem {
@@ -81,6 +90,18 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  tax?: number;
+  discount?: number;
+  category?: string;
+  notes?: string;
+}
+
+export interface PaymentSchedule {
+  dueDate: Date;
+  amount: number;
+  status: 'pending' | 'paid' | 'overdue';
+  paymentMethod?: string;
+  notes?: string;
 }
 
 export interface DashboardStats {
@@ -90,4 +111,24 @@ export interface DashboardStats {
   expiringSoon: number;
   revenueToday: number;
   revenueTrend: number[];
+}
+
+export interface InvoiceTemplate {
+  id: string;
+  name: string;
+  style: {
+    primaryColor: string;
+    secondaryColor: string;
+    fontFamily: string;
+    fontSize: number;
+    layout: 'standard' | 'compact' | 'detailed';
+  };
+  sections: {
+    header: boolean;
+    footer: boolean;
+    watermark: boolean;
+    signature: boolean;
+    qrCode: boolean;
+  };
+  customFields: string[];
 }
