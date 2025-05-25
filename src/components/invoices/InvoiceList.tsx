@@ -1,39 +1,26 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
-import { Search, Plus, ChevronRight, FileText } from 'lucide-react';
+import { format } from 'date-fns';
 
 const InvoiceList: React.FC = () => {
   const { invoices, customers } = useApp();
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Filter invoices based on search query
+  const [activeTab, setActiveTab] = useState<'unpaid' | 'partially-paid' | 'paid' | 'cancelled' | 'all'>('unpaid');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedStaff, setSelectedStaff] = useState('all');
+  const [selectedCustomer, setSelectedCustomer] = useState('all');
+  const [selectedGroup, setSelectedGroup] = useState('all');
+
+  // Filter invoices based on active tab
   const filteredInvoices = invoices.filter(invoice => {
-    const customer = customers.find(c => c.id === invoice.customerId);
-    
-    if (!customer) return false;
-    
-    return (
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.total.toString().includes(searchQuery)
-    );
+    if (activeTab === 'all') return true;
+    if (activeTab === 'partially-paid') return invoice.status === 'partial';
+    if (activeTab === 'paid') return invoice.status === 'paid';
+    if (activeTab === 'unpaid') return invoice.status === 'unpaid';
+    if (activeTab === 'cancelled') return invoice.status === 'cancelled';
+    return true;
   });
-  
-  // Sort invoices by date (most recent first)
-  const sortedInvoices = [...filteredInvoices].sort((a, b) => 
-    b.date.getTime() - a.date.getTime()
-  );
-  
-  // Format date
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    }).format(date);
-  };
-  
+
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -42,131 +29,259 @@ const InvoiceList: React.FC = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
-  
-  // Status badge
-  const getStatusBadge = (status: string) => {
-    const badgeColors = {
-      'paid': 'bg-green-100 text-green-800',
-      'unpaid': 'bg-yellow-100 text-yellow-800',
-      'overdue': 'bg-red-100 text-red-800'
-    };
-    
-    return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${badgeColors[status as keyof typeof badgeColors]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
+
+  // Format date
+  const formatDate = (date: Date) => {
+    return format(date, 'MMM dd, yyyy');
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold text-gray-800">All Invoices</h2>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search size={18} className="text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search invoices..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-            
-            <Link
-              to="/invoices/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Plus size={18} className="mr-1" />
-              <span>New Invoice</span>
-            </Link>
-          </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-800">Invoices</h2>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800">
+            Add Invoice
+          </button>
+          <button className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600">
+            View Reports
+          </button>
         </div>
       </div>
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Invoice
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Customer
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Due Date
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedInvoices.map((invoice) => {
-              const customer = customers.find(c => c.id === invoice.customerId);
+
+      {/* Status Tabs */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('unpaid')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'unpaid'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500'
+          }`}
+        >
+          Unpaid
+        </button>
+        <button
+          onClick={() => setActiveTab('partially-paid')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'partially-paid'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500'
+          }`}
+        >
+          Partially Paid
+        </button>
+        <button
+          onClick={() => setActiveTab('paid')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'paid'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500'
+          }`}
+        >
+          Paid
+        </button>
+        <button
+          onClick={() => setActiveTab('cancelled')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'cancelled'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500'
+          }`}
+        >
+          Cancelled
+        </button>
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'all'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500'
+          }`}
+        >
+          All
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date Range
+            </label>
+            <input
+              type="date"
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Staff
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              value={selectedStaff}
+              onChange={(e) => setSelectedStaff(e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="staff1">Staff 1</option>
+              <option value="staff2">Staff 2</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              value={selectedCustomer}
+              onChange={(e) => setSelectedCustomer(e.target.value)}
+            >
+              <option value="all">All</option>
+              {customers.map(customer => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer Group
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="group1">Group 1</option>
+              <option value="group2">Group 2</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-4">
+          <button className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700">
+            Filter
+          </button>
+        </div>
+      </div>
+
+      {/* Invoice Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  #
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Account
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Staff
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Title
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Invoice Date
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Due Date
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Manage
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredInvoices.map((invoice) => {
+                const customer = customers.find(c => c.id === invoice.customerId);
+                
+                return (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      #{invoice.id.slice(0, 8)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{customer?.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      Admin
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      Invoice #{invoice.id.slice(0, 8)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {formatCurrency(invoice.total)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(invoice.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(invoice.dueDate)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        invoice.status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : invoice.status === 'unpaid'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      Standard
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button className="text-blue-600 hover:text-blue-900">View</button>
+                    </td>
+                  </tr>
+                );
+              })}
               
-              return (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <FileText size={16} className="text-gray-400 mr-2" />
-                      <span className="text-sm font-medium text-gray-900">#{invoice.id.replace('inv', '')}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{customer?.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(invoice.date)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(invoice.dueDate)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(invoice.total)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(invoice.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      to={`/invoices/${invoice.id}`}
-                      className="inline-flex items-center text-blue-600 hover:text-blue-900"
-                    >
-                      <span className="mr-1">View</span>
-                      <ChevronRight size={16} />
-                    </Link>
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-6 py-10 text-center text-gray-500">
+                    No invoices found
                   </td>
                 </tr>
-              );
-            })}
-            
-            {sortedInvoices.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
-                  {searchQuery 
-                    ? `No invoices found matching "${searchQuery}"`
-                    : 'No invoices yet.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
