@@ -20,9 +20,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     };
     return new Intl.DateTimeFormat('en-US', options).format(date);
   };
@@ -175,93 +173,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ sale, customer, o
               </div>
             </div>
           </div>
-
-          {/* Business Specific Details */}
-          {sale.businessType === 'telecom_phone' && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Phone Details</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500">Brand</div>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedSale.phoneDetails?.brand || ''}
-                      onChange={(e) => setEditedSale({
-                        ...editedSale,
-                        phoneDetails: { ...editedSale.phoneDetails, brand: e.target.value }
-                      })}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <div className="text-sm font-medium">{sale.phoneDetails?.brand}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Model</div>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedSale.phoneDetails?.model || ''}
-                      onChange={(e) => setEditedSale({
-                        ...editedSale,
-                        phoneDetails: { ...editedSale.phoneDetails, model: e.target.value }
-                      })}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <div className="text-sm font-medium">{sale.phoneDetails?.model}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">IMEI</div>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedSale.phoneDetails?.imei || ''}
-                      onChange={(e) => setEditedSale({
-                        ...editedSale,
-                        phoneDetails: { ...editedSale.phoneDetails, imei: e.target.value }
-                      })}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <div className="text-sm font-medium">{sale.phoneDetails?.imei}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {(sale.businessType === 'travel_domestic' || sale.businessType === 'travel_international') && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Travel Details</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500">Route</div>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedSale.travelDetails?.route || ''}
-                      onChange={(e) => setEditedSale({
-                        ...editedSale,
-                        travelDetails: { ...editedSale.travelDetails, route: e.target.value }
-                      })}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <div className="text-sm font-medium">{sale.travelDetails?.route}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Type</div>
-                  <div className="text-sm font-medium">
-                    {sale.businessType === 'travel_domestic' ? 'Domestic' : 'International'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Notes */}
           {(sale.notes || isEditing) && (

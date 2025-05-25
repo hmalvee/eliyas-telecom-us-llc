@@ -100,35 +100,51 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     return allCustomerNumbers.filter(n => n.customerId === selectedCustomer.id);
   }, [selectedCustomer, allCustomerNumbers]);
 
+  // Calculate total amount based on business type
+  const calculateTotalAmount = () => {
+    switch (businessType) {
+      case 'telecom_recharge':
+        return rechargeAmount;
+      case 'telecom_phone':
+        return phoneData.price;
+      case 'telecom_service':
+        return serviceData.cost;
+      case 'travel_domestic':
+      case 'travel_international':
+        return travelData.customerFare;
+      default:
+        return 0;
+    }
+  };
+
+  // Calculate due amount
+  const calculateDueAmount = () => {
+    const totalAmount = calculateTotalAmount();
+    return paymentStatus === 'partial' ? totalAmount - paymentAmount : 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return;
 
     try {
-      let amount = 0;
+      let amount = calculateTotalAmount();
       let finalNotes = notes;
 
       // Set amount based on business type
       switch (businessType) {
         case 'telecom_recharge':
-          amount = rechargeAmount;
           finalNotes = `${notes}\nNumber: ${useOtherNumber ? otherNumber : selectedNumber?.phoneNumber || selectedCustomer.phone}`;
           break;
         case 'telecom_phone':
-          amount = phoneData.price;
           finalNotes = `${notes}\nBrand: ${phoneData.brand}\nModel: ${phoneData.model}\nIMEI: ${phoneData.imei}`;
           break;
         case 'telecom_service':
-          amount = serviceData.cost;
           finalNotes = `${notes}\nService: ${serviceData.type === 'Other' ? serviceData.customType : serviceData.type}\nDescription: ${serviceData.description}`;
           break;
         case 'travel_domestic':
         case 'travel_international':
-          amount = travelData.customerFare;
           finalNotes = `${notes}\nRoute: ${travelData.route}`;
-          break;
-        case 'telecom_other':
-          amount = paymentAmount;
           break;
       }
 
@@ -540,19 +556,30 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
             </div>
 
             {paymentStatus === 'partial' && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Payment Amount
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value))}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+              <>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Payment Amount
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value))}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Due Amount
+                  </label>
+                  <div className="mt-1 text-lg font-medium text-red-600">
+                    ${calculateDueAmount().toFixed(2)}
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="mt-4">
