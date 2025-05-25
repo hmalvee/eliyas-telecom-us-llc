@@ -1,3 +1,5 @@
+import { Customer, Plan, CustomerPlan, Sale, Invoice, InvoiceItem } from './types';
+
 export interface Customer {
   id: string;
   name: string;
