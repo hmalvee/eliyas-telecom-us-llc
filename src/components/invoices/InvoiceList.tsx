@@ -5,6 +5,8 @@ import { Search, Plus, Calendar, User, Edit2, Trash2, ChevronLeft, ChevronRight,
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from './InvoicePDF';
 import InvoiceDetailsModal from './InvoiceDetailsModal';
+import { v4 as uuidv4 } from 'uuid';
+import { Invoice } from '../../types';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -21,6 +23,37 @@ const InvoiceList: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Create a new blank invoice
+  const createNewInvoice = () => {
+    const newInvoice: Invoice = {
+      id: uuidv4(),
+      customerId: '',
+      saleId: '',
+      date: new Date(),
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+      items: [{
+        id: uuidv4(),
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        total: 0
+      }],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      status: 'unpaid',
+      currency: 'USD',
+      exchangeRate: 1,
+      template: 'standard',
+      notes: [],
+      terms: [],
+      customFields: {}
+    };
+    setSelectedInvoice(newInvoice);
+    setIsCreating(true);
+  };
 
   // Filter invoices based on all criteria
   const filteredInvoices = useMemo(() => {
@@ -142,7 +175,10 @@ const InvoiceList: React.FC = () => {
                 />
               </div>
               
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <button 
+                onClick={createNewInvoice}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
                 <Plus size={18} className="mr-1" />
                 <span>New Invoice</span>
               </button>
@@ -337,15 +373,13 @@ const InvoiceList: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disable
-d:cursor-not-allowed"
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -408,8 +442,12 @@ d:cursor-not-allowed"
       {selectedInvoice && (
         <InvoiceDetailsModal
           invoice={selectedInvoice}
-          customer={customers.find(c => c.id === selectedInvoice.customerId)!}
-          onClose={() => setSelectedInvoice(null)}
+          customer={customers.find(c => c.id === selectedInvoice.customerId)}
+          onClose={() => {
+            setSelectedInvoice(null);
+            setIsCreating(false);
+          }}
+          isCreating={isCreating}
         />
       )}
     </div>
