@@ -94,8 +94,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const newSale: Sale = {
         ...saleData,
         id: Math.random().toString(36).substr(2, 9),
-        amountPaid: 0,
-        status: 'unpaid'
+        amountPaid: saleData.paymentMethod === 'cash' ? saleData.amount : 0,
+        status: saleData.paymentMethod === 'cash' ? 'paid' : 'unpaid'
       };
       setSales(prev => [...prev, newSale]);
       
@@ -165,11 +165,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Generate an invoice from a sale
   const generateInvoice = async (sale: Sale) => {
     try {
-      const plan = plans.find(p => p.id === sale.planId);
-      if (!plan) throw new Error('Plan not found');
+      const customer = customers.find(c => c.id === sale.customerId);
+      if (!customer) throw new Error('Customer not found');
 
       const dueDate = new Date(sale.date);
       dueDate.setDate(dueDate.getDate() + 14);
+
+      // Parse the notes to get the description
+      let description = '';
+      if (sale.business === 'telecom') {
+        const notes = sale.notes.split('\n');
+        const carrier = notes[0].replace('Carrier: ', '');
+        const number = notes[1].replace('Number: ', '');
+        description = `${carrier} Recharge for ${number}`;
+      } else if (sale.business === 'travel') {
+        const notes = sale.notes.split('\n');
+        const route = notes[0].replace('Route: ', '');
+        description = `Flight Ticket - ${route}`;
+      }
 
       const newInvoice: Invoice = {
         id: Math.random().toString(36).substr(2, 9),
@@ -179,15 +192,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         dueDate: dueDate,
         items: [{
           id: Math.random().toString(36).substr(2, 9),
-          description: `${plan.name} - Monthly Subscription`,
+          description: description,
           quantity: 1,
-          unitPrice: plan.price,
-          total: plan.price
+          unitPrice: sale.amount,
+          total: sale.amount
         }],
-        subtotal: plan.price,
-        tax: Number((plan.price * 0.09).toFixed(2)),
-        total: Number((plan.price * 1.09).toFixed(2)),
-        status: 'unpaid'
+        subtotal: sale.amount,
+        tax: Number((sale.amount * 0.09).toFixed(2)),
+        total: Number((sale.amount * 1.09).toFixed(2)),
+        status: sale.status
       };
 
       setInvoices(prev => [...prev, newInvoice]);
