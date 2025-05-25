@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
@@ -43,7 +43,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-          <ToastContainer position="top-right" autoClose={3000} />
+          <Toaster position="top-right" />
         </Router>
       </AppProvider>
     </AuthProvider>
