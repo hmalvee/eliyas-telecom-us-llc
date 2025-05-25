@@ -356,3 +356,56 @@ export const dashboardStats: DashboardStats = {
       .reduce((sum, sale) => sum + sale.amount, 0);
   }),
 };
+
+export const settings: Settings = {
+  businessInfo: {
+    telecom: {
+      name: 'Eliyas Telecom USA',
+      logo: '',
+      address: '123 Main St, Anytown, CA 90210',
+      phone: '(555) 123-4567',
+      email: 'contact@eliyastelecom.com'
+    },
+    travel: {
+      name: 'USA Tours & Travels',
+      logo: '',
+      address: '456 Travel Blvd, Anytown, CA 90210',
+      phone: '(555) 987-6543',
+      email: 'contact@usatoursandtravels.com'
+    }
+  },
+  invoiceTemplate: {
+    colors: {
+      primary: '#3b82f6',
+      secondary: '#1d4ed8'
+    },
+    font: 'Inter',
+    showQrCode: true,
+    showSignature: true,
+    showWatermark: true,
+    footer: 'Thank you for your business!',
+    currency: 'USD',
+    template: 'standard'
+  },
+  email: {
+    senderName: 'Eliyas Telecom',
+    senderEmail: 'invoices@eliyastelecom.com',
+    subject: 'Invoice from Eliyas Telecom',
+    template: `
+Dear {customerName},
+
+Please find your invoice ({invoiceNumber}) attached.
+
+Amount Due: {amount}
+Due Date: {dueDate}
+
+You can view and pay your invoice online at:
+{paymentLink}
+
+Thank you for your business!
+
+Best regards,
+Eliyas Telecom Team
+    `.trim()
+  }
+};
