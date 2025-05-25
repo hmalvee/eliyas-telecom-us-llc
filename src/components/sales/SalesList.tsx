@@ -11,7 +11,7 @@ interface SortConfig {
 }
 
 const SalesList: React.FC = () => {
-  const { sales, customers, plans, deleteSale, updateSale } = useApp();
+  const { sales, customers, deleteSale, updateSale } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('all');
   const [selectedOrderStatus, setSelectedOrderStatus] = useState('all');
@@ -20,20 +20,18 @@ const SalesList: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
-  
+
   // Filter sales based on all criteria
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const customer = customers.find(c => c.id === sale.customerId);
-      const plan = plans.find(p => p.id === sale.planId);
       
       const matchesSearch = 
         customer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plan?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sale.amount.toString().includes(searchQuery);
       
-      const matchesPaymentStatus = selectedPaymentStatus === 'all' || (sale.paymentStatus || 'unpaid') === selectedPaymentStatus;
-      const matchesOrderStatus = selectedOrderStatus === 'all' || (sale.orderStatus || 'processing') === selectedOrderStatus;
+      const matchesPaymentStatus = selectedPaymentStatus === 'all' || sale.paymentStatus === selectedPaymentStatus;
+      const matchesOrderStatus = selectedOrderStatus === 'all' || sale.orderStatus === selectedOrderStatus;
       const matchesBusiness = selectedBusiness === 'all' || sale.businessType?.startsWith(selectedBusiness.toLowerCase());
       
       // Date range filtering
@@ -47,11 +45,11 @@ const SalesList: React.FC = () => {
       
       return matchesSearch && matchesPaymentStatus && matchesOrderStatus && matchesBusiness && matchesDateRange;
     });
-  }, [sales, customers, plans, searchQuery, selectedPaymentStatus, selectedOrderStatus, selectedBusiness, dateRange]);
-  
+  }, [sales, customers, searchQuery, selectedPaymentStatus, selectedOrderStatus, selectedBusiness, dateRange]);
+
   // Sort sales
   const sortedSales = useMemo(() => {
-    const sorted = [...filteredSales].sort((a, b) => {
+    return [...filteredSales].sort((a, b) => {
       switch (sortConfig.key) {
         case 'date':
           return sortConfig.direction === 'asc' 
@@ -71,31 +69,28 @@ const SalesList: React.FC = () => {
           return 0;
       }
     });
-    return sorted;
   }, [filteredSales, sortConfig]);
 
   // Calculate pagination
   const totalPages = Math.ceil(sortedSales.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedSales = sortedSales.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  
+
   // Format date
   const formatDate = (date: Date) => {
-    return new Intl.NumberFormat('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    }).format(date);
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Intl.DateTimeFormat('en-US', options).format(date);
   };
-  
+
   // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => 
+    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
   // Handle sort
   const handleSort = (key: string) => {
@@ -104,8 +99,28 @@ const SalesList: React.FC = () => {
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
-  
-  // Status badge
+
+  // Handle delete
+  const handleDelete = async (saleId: string) => {
+    if (window.confirm('Are you sure you want to delete this sale? This action cannot be undone.')) {
+      await deleteSale(saleId);
+    }
+  };
+
+  // Handle status update
+  const handleUpdateStatus = async (saleId: string, paymentStatus: string, orderStatus: string) => {
+    const sale = sales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    await updateSale({
+      ...sale,
+      paymentStatus: paymentStatus as 'paid' | 'partial' | 'unpaid',
+      orderStatus: orderStatus as 'delivered' | 'canceled' | 'processing'
+    });
+    setEditingSaleId(null);
+  };
+
+  // Status badges
   const getPaymentStatusBadge = (status: string = 'unpaid') => {
     const badgeColors = {
       'paid': 'bg-green-100 text-green-800',
@@ -114,11 +129,9 @@ const SalesList: React.FC = () => {
     };
     
     const colorClass = badgeColors[status as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
-    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
-    
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
-        {displayStatus}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
@@ -131,31 +144,11 @@ const SalesList: React.FC = () => {
     };
     
     const colorClass = badgeColors[status as keyof typeof badgeColors] || 'bg-gray-100 text-gray-800';
-    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
-    
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClass}`}>
-        {displayStatus}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
-  };
-
-  const handleDeleteSale = async (saleId: string) => {
-    if (window.confirm('Are you sure you want to delete this sale? This action cannot be undone.')) {
-      await deleteSale(saleId);
-    }
-  };
-
-  const handleUpdateStatus = async (saleId: string, paymentStatus: string, orderStatus: string) => {
-    const sale = sales.find(s => s.id === saleId);
-    if (!sale) return;
-
-    await updateSale({
-      ...sale,
-      paymentStatus: paymentStatus as 'paid' | 'partial' | 'unpaid',
-      orderStatus: orderStatus as 'delivered' | 'canceled' | 'processing'
-    });
-    setEditingSaleId(null);
   };
 
   // Reset filters
@@ -319,9 +312,6 @@ const SalesList: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Business
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Plan
-                </th>
                 <th 
                   scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -348,7 +338,6 @@ const SalesList: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedSales.map((sale) => {
                 const customer = customers.find(c => c.id === sale.customerId);
-                const plan = plans.find(p => p.id === sale.planId);
                 
                 return (
                   <tr key={sale.id} className="hover:bg-gray-50">
@@ -371,11 +360,8 @@ const SalesList: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {sale.businessType?.startsWith('telecom') ? 'Eliyas Telecom' : 'US Tours And Travels'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{plan?.name}</div>
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(sale.amount).replace('$', '')}
+                      {formatCurrency(sale.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingSaleId === sale.id ? (
@@ -416,7 +402,7 @@ const SalesList: React.FC = () => {
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteSale(sale.id)}
+                          onClick={() => handleDelete(sale.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 size={16} />
@@ -429,7 +415,7 @@ const SalesList: React.FC = () => {
               
               {paginatedSales.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                     {searchQuery 
                       ? `No sales found matching "${searchQuery}"`
                       : 'No sales recorded yet.'}
