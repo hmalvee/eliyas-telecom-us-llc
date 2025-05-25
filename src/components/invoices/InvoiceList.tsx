@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { format } from 'date-fns';
-import InvoiceDetails from './InvoiceDetails';
-import { Search } from 'lucide-react';
 
 const InvoiceList: React.FC = () => {
   const { invoices, customers } = useApp();
@@ -10,8 +8,8 @@ const InvoiceList: React.FC = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedStaff, setSelectedStaff] = useState('all');
+  const [selectedCustomer, setSelectedCustomer] = useState('all');
   const [selectedGroup, setSelectedGroup] = useState('all');
-  const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null);
 
   // Filter invoices based on active tab
   const filteredInvoices = invoices.filter(invoice => {
@@ -108,7 +106,7 @@ const InvoiceList: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date Range
@@ -147,6 +145,23 @@ const InvoiceList: React.FC = () => {
               <option value="all">All</option>
               <option value="staff1">Staff 1</option>
               <option value="staff2">Staff 2</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              value={selectedCustomer}
+              onChange={(e) => setSelectedCustomer(e.target.value)}
+            >
+              <option value="all">All</option>
+              {customers.map(customer => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -214,7 +229,7 @@ const InvoiceList: React.FC = () => {
                 const customer = customers.find(c => c.id === invoice.customerId);
                 
                 return (
-                  <tr key={invoice.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedInvoice(invoice.id)}>
+                  <tr key={invoice.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       #{invoice.id.slice(0, 8)}
                     </td>
@@ -268,14 +283,6 @@ const InvoiceList: React.FC = () => {
           </table>
         </div>
       </div>
-
-      {/* Invoice Details Modal */}
-      {selectedInvoice && (
-        <InvoiceDetails
-          invoice={invoices.find(i => i.id === selectedInvoice)!}
-          onClose={() => setSelectedInvoice(null)}
-        />
-      )}
     </div>
   );
 };

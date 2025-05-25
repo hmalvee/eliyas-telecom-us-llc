@@ -1,10 +1,27 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { toast } from 'react-toastify';
-import { Customer, Plan, CustomerPlan, Sale, Invoice, DashboardStats } from '../types';
-import { customers, plans, customerPlans, sales, invoices } from '../data/mockData';
+import { 
+  Customer, 
+  CustomerNumber,
+  Plan, 
+  CustomerPlan, 
+  Sale, 
+  Invoice, 
+  DashboardStats 
+} from '../types';
+import { customers as initialCustomers, plans as initialPlans, customerPlans as initialCustomerPlans, sales as initialSales, invoices as initialInvoices, dashboardStats as initialDashboardStats } from '../data/mockData';
+
+interface Payment {
+  saleId: string;
+  amount: number;
+  date: Date;
+  method: 'cash' | 'card' | 'online';
+  notes?: string;
+}
 
 interface AppContextType {
   customers: Customer[];
+  customerNumbers: CustomerNumber[];
   plans: Plan[];
   customerPlans: CustomerPlan[];
   sales: Sale[];
@@ -13,78 +30,34 @@ interface AppContextType {
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate'>) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
-  addSale: (sale: Omit<Sale, 'id' | 'invoiceNumber'>) => Promise<Sale>;
+  addCustomerNumber: (number: Omit<CustomerNumber, 'id'>) => Promise<void>;
+  deleteCustomerNumber: (id: string) => Promise<void>;
+  addSale: (sale: Omit<Sale, 'id' | 'amountPaid' | 'status'>) => Promise<Sale>;
   updateSale: (sale: Sale) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
-  addPayment: (payment: { saleId: string; amount: number; date: Date; method: 'cash' | 'card' | 'online'; notes?: string }) => Promise<void>;
-  updateInvoice: (invoice: Invoice) => Promise<void>;
+  generateInvoice: (sale: Sale) => Promise<void>;
+  addCustomerPlan: (customerPlan: Omit<CustomerPlan, 'id'>) => Promise<void>;
+  updateCustomerPlan: (customerPlan: CustomerPlan) => Promise<void>;
+  addPayment: (payment: Payment) => Promise<void>;
+  updateCustomerNumber: (number: CustomerNumber) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [customersList, setCustomers] = useState<Customer[]>(customers);
-  const [plansList, setPlans] = useState<Plan[]>(plans);
-  const [customerPlansList, setCustomerPlans] = useState<CustomerPlan[]>(customerPlans);
-  const [salesList, setSales] = useState<Sale[]>(sales);
-  const [invoicesList, setInvoices] = useState<Invoice[]>(invoices);
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>([]);
+  const [plans, setPlans] = useState<Plan[]>(initialPlans);
+  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(initialCustomerPlans);
+  const [sales, setSales] = useState<Sale[]>(initialSales);
+  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(initialDashboardStats);
 
-  // Calculate dashboard stats
-  const calculateDashboardStats = (): DashboardStats => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayRevenue = salesList
-      .filter(sale => {
-        const saleDate = new Date(sale.date);
-        saleDate.setHours(0, 0, 0, 0);
-        return saleDate.getTime() === today.getTime();
-      })
-      .reduce((sum, sale) => sum + sale.amount, 0);
-
-    const activePlansCount = customerPlansList.filter(plan => plan.status === 'active').length;
-
-    const expiringSoon = customerPlansList.filter(plan => {
-      const daysUntilExpiry = Math.floor((plan.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return plan.status === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-    }).length;
-
-    // Calculate revenue trend for the last 7 days
-    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
-      
-      return salesList
-        .filter(sale => {
-          const saleDate = new Date(sale.date);
-          saleDate.setHours(0, 0, 0, 0);
-          return saleDate.getTime() === date.getTime();
-        })
-        .reduce((sum, sale) => sum + sale.amount, 0);
-    }).reverse();
-
-    return {
-      totalSales: salesList.length,
-      totalCustomers: customersList.length,
-      activePlans: activePlansCount,
-      expiringSoon,
-      revenueToday: todayRevenue,
-      revenueTrend
-    };
-  };
-
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(calculateDashboardStats());
-
-  // Update dashboard stats whenever relevant data changes
-  React.useEffect(() => {
-    setDashboardStats(calculateDashboardStats());
-  }, [customersList, customerPlansList, salesList]);
-
-  const addCustomer = async (customerData: Omit<Customer, 'id' | 'joinDate'>) => {
+  // Add a new customer
+  const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate'>) => {
     try {
       const newCustomer: Customer = {
-        ...customerData,
+        ...customer,
         id: Math.random().toString(36).substr(2, 9),
         joinDate: new Date()
       };
@@ -97,6 +70,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Update an existing customer
   const updateCustomer = async (customer: Customer) => {
     try {
       setCustomers(prev => prev.map(c => c.id === customer.id ? customer : c));
@@ -108,6 +82,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Delete a customer
   const deleteCustomer = async (id: string) => {
     try {
       setCustomers(prev => prev.filter(c => c.id !== id));
@@ -119,14 +94,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addSale = async (saleData: Omit<Sale, 'id' | 'invoiceNumber'>): Promise<Sale> => {
+  // Add a new customer number
+  const addCustomerNumber = async (number: Omit<CustomerNumber, 'id'>) => {
+    try {
+      const newNumber: CustomerNumber = {
+        ...number,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      setCustomerNumbers(prev => [...prev, newNumber]);
+      toast.success('Phone number added successfully');
+    } catch (error) {
+      console.error('Error adding phone number:', error);
+      toast.error('Failed to add phone number');
+      throw error;
+    }
+  };
+
+  // Delete a customer number
+  const deleteCustomerNumber = async (id: string) => {
+    try {
+      setCustomerNumbers(prev => prev.filter(n => n.id !== id));
+      toast.success('Phone number deleted successfully');
+    } catch (error) {
+      console.error('Error deleting phone number:', error);
+      toast.error('Failed to delete phone number');
+      throw error;
+    }
+  };
+
+  // Add a new sale
+  const addSale = async (saleData: Omit<Sale, 'id' | 'amountPaid' | 'status'>): Promise<Sale> => {
     try {
       const newSale: Sale = {
         ...saleData,
         id: Math.random().toString(36).substr(2, 9),
-        invoiceNumber: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+        amountPaid: saleData.paymentMethod === 'cash' ? saleData.amount : 0,
+        status: saleData.paymentMethod === 'cash' ? 'paid' : 'unpaid'
       };
       setSales(prev => [...prev, newSale]);
+      
+      // Automatically generate invoice for the new sale
+      await generateInvoice(newSale);
+      
       toast.success('Sale created successfully');
       return newSale;
     } catch (error) {
@@ -136,6 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Update a sale
   const updateSale = async (sale: Sale) => {
     try {
       setSales(prev => prev.map(s => s.id === sale.id ? sale : s));
@@ -147,6 +157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Delete a sale
   const deleteSale = async (id: string) => {
     try {
       setSales(prev => prev.filter(s => s.id !== id));
@@ -158,19 +169,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addPayment = async (payment: { saleId: string; amount: number; date: Date; method: 'cash' | 'card' | 'online'; notes?: string }) => {
+  // Add a payment to a sale
+  const addPayment = async (payment: Payment) => {
     try {
-      setSales(prev => prev.map(sale => {
-        if (sale.id === payment.saleId) {
-          const newAmountPaid = sale.amountPaid + payment.amount;
-          return {
-            ...sale,
-            amountPaid: newAmountPaid,
-            paymentStatus: newAmountPaid >= sale.amount ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid'
-          };
-        }
-        return sale;
-      }));
+      setSales(prevSales => {
+        return prevSales.map(sale => {
+          if (sale.id === payment.saleId) {
+            const newAmountPaid = sale.amountPaid + payment.amount;
+            const newStatus = newAmountPaid >= sale.amount ? 'paid' : 'partial';
+            
+            return {
+              ...sale,
+              amountPaid: newAmountPaid,
+              status: newStatus
+            };
+          }
+          return sale;
+        });
+      });
+      
       toast.success('Payment recorded successfully');
     } catch (error) {
       console.error('Error recording payment:', error);
@@ -179,45 +196,137 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateInvoice = async (invoice: Invoice) => {
+  // Generate an invoice from a sale
+  const generateInvoice = async (sale: Sale) => {
     try {
-      setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
-      toast.success('Invoice updated successfully');
+      const customer = customers.find(c => c.id === sale.customerId);
+      if (!customer) throw new Error('Customer not found');
+
+      const dueDate = new Date(sale.date);
+      dueDate.setDate(dueDate.getDate() + 14);
+
+      // Parse the notes to get the description
+      let description = '';
+      if (sale.businessType === 'telecom_recharge') {
+        const notes = sale.notes.split('\n');
+        const number = notes.find(n => n.startsWith('Number:'))?.replace('Number: ', '') || '';
+        description = `Recharge for ${number}`;
+      } else if (sale.businessType?.startsWith('travel_')) {
+        const notes = sale.notes.split('\n');
+        const route = notes.find(n => n.startsWith('Route:'))?.replace('Route: ', '') || '';
+        description = `Travel Booking - ${route}`;
+      } else if (sale.businessType === 'telecom_phone') {
+        const notes = sale.notes.split('\n');
+        const brand = notes.find(n => n.startsWith('Brand:'))?.replace('Brand: ', '') || '';
+        const model = notes.find(n => n.startsWith('Model:'))?.replace('Model: ', '') || '';
+        description = `Phone Sale - ${brand} ${model}`;
+      } else if (sale.businessType === 'telecom_service') {
+        const notes = sale.notes.split('\n');
+        const service = notes.find(n => n.startsWith('Service:'))?.replace('Service: ', '') || '';
+        description = `Service - ${service}`;
+      } else {
+        description = sale.notes;
+      }
+
+      const newInvoice: Invoice = {
+        id: Math.random().toString(36).substr(2, 9),
+        customerId: sale.customerId,
+        saleId: sale.id,
+        date: sale.date,
+        dueDate: dueDate,
+        items: [{
+          id: Math.random().toString(36).substr(2, 9),
+          description: description,
+          quantity: 1,
+          unitPrice: sale.amount,
+          total: sale.amount
+        }],
+        subtotal: sale.amount,
+        tax: Number((sale.amount * 0.09).toFixed(2)),
+        total: Number((sale.amount * 1.09).toFixed(2)),
+        status: sale.status
+      };
+
+      setInvoices(prev => [...prev, newInvoice]);
+      toast.success('Invoice generated successfully');
     } catch (error) {
-      console.error('Error updating invoice:', error);
-      toast.error('Failed to update invoice');
+      console.error('Error generating invoice:', error);
+      toast.error('Failed to generate invoice');
       throw error;
     }
   };
 
-  const value = {
-    customers: customersList,
-    plans: plansList,
-    customerPlans: customerPlansList,
-    sales: salesList,
-    invoices: invoicesList,
-    dashboardStats,
-    addCustomer,
-    updateCustomer,
-    deleteCustomer,
-    addSale,
-    updateSale,
-    deleteSale,
-    addPayment,
-    updateInvoice,
+  // Add a customer plan
+  const addCustomerPlan = async (customerPlan: Omit<CustomerPlan, 'id'>) => {
+    try {
+      const newCustomerPlan: CustomerPlan = {
+        ...customerPlan,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      setCustomerPlans(prev => [...prev, newCustomerPlan]);
+      toast.success('Plan assigned successfully');
+    } catch (error) {
+      console.error('Error adding customer plan:', error);
+      toast.error('Failed to assign plan');
+      throw error;
+    }
+  };
+
+  // Update a customer plan
+  const updateCustomerPlan = async (customerPlan: CustomerPlan) => {
+    try {
+      setCustomerPlans(prev => prev.map(cp => cp.id === customerPlan.id ? customerPlan : cp));
+      toast.success('Plan updated successfully');
+    } catch (error) {
+      console.error('Error updating customer plan:', error);
+      toast.error('Failed to update plan');
+      throw error;
+    }
+  };
+
+  const updateCustomerNumber = async (number: CustomerNumber) => {
+    try {
+      setCustomerNumbers(prev => prev.map(n => n.id === number.id ? number : n));
+      toast.success('Phone number updated successfully');
+    } catch (error) {
+      console.error('Error updating phone number:', error);
+      toast.error('Failed to update phone number');
+      throw error;
+    }
   };
 
   return (
-    <AppContext.Provider value={value}>
+    <AppContext.Provider value={{
+      customers,
+      customerNumbers,
+      plans,
+      customerPlans,
+      sales,
+      invoices,
+      dashboardStats,
+      addCustomer,
+      updateCustomer,
+      deleteCustomer,
+      addCustomerNumber,
+      deleteCustomerNumber,
+      addSale,
+      updateSale,
+      deleteSale,
+      generateInvoice,
+      addCustomerPlan,
+      updateCustomerPlan,
+      addPayment,
+      updateCustomerNumber,
+    }}>
       {children}
     </AppContext.Provider>
   );
-}
+};
 
-export function useApp() {
+export const useApp = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;
-}
+};

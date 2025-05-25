@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { Invoice, Customer } from '../../types';
 import { format } from 'date-fns';
 
@@ -15,14 +15,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 30,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  logo: {
-    width: 120,
-  },
-  companyInfo: {
-    textAlign: 'right',
   },
   companyName: {
     fontSize: 24,
@@ -71,29 +63,18 @@ const styles = StyleSheet.create({
   bold: {
     fontWeight: 'bold',
   },
-  footer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 30,
-    right: 30,
-    textAlign: 'center',
-    fontSize: 10,
-    color: '#666',
-  },
 });
 
 const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, customer }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.companyName}>Eliyas Telecom USA</Text>
-          <View style={styles.companyDetails}>
-            <Text>123 Business Street</Text>
-            <Text>City, State 12345</Text>
-            <Text>Phone: (555) 123-4567</Text>
-            <Text>Email: billing@eliyastelecom.com</Text>
-          </View>
+        <Text style={styles.companyName}>Eliyas Telecom USA</Text>
+        <View style={styles.companyDetails}>
+          <Text>123 Business Street</Text>
+          <Text>City, State 12345</Text>
+          <Text>Phone: (555) 123-4567</Text>
+          <Text>Email: billing@eliyastelecom.com</Text>
         </View>
       </View>
 
@@ -146,10 +127,6 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, customer }) => (
             Total: ${invoice.total.toFixed(2)}
           </Text>
         </View>
-      </View>
-
-      <View style={styles.footer}>
-        <Text>Thank you for your business!</Text>
       </View>
     </Page>
   </Document>
