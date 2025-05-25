@@ -49,12 +49,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return plan.status === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
     }).length;
 
+    // Calculate revenue trend for the last 7 days
+    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      return salesList
+        .filter(sale => {
+          const saleDate = new Date(sale.date);
+          saleDate.setHours(0, 0, 0, 0);
+          return saleDate.getTime() === date.getTime();
+        })
+        .reduce((sum, sale) => sum + sale.amount, 0);
+    }).reverse();
+
     return {
+      totalSales: salesList.length,
       totalCustomers: customersList.length,
       activePlans: activePlansCount,
       expiringSoon,
       revenueToday: todayRevenue,
-      revenueTrend: Array(7).fill(0) // Placeholder for revenue trend
+      revenueTrend
     };
   };
 
