@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, isWithinInterval, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, isWithinInterval, subDays, parseISO } from 'date-fns';
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -11,15 +11,24 @@ const Reports: React.FC = () => {
   const { sales, customers } = useApp();
   const [businessType, setBusinessType] = useState<'all' | 'telecom' | 'travel'>('all');
   const [timeRange, setTimeRange] = useState<'1m' | '3m' | '6m' | '1y'>('1m');
-  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [customDateRange, setCustomDateRange] = useState({
+    start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd')
+  });
   const [isCustomDate, setIsCustomDate] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Force update when date range changes
+  useEffect(() => {
+    setForceUpdate(prev => prev + 1);
+  }, [customDateRange, timeRange, isCustomDate]);
 
   // Get date range based on selected time range or custom dates
   const getDateRange = () => {
     if (isCustomDate && customDateRange.start && customDateRange.end) {
       return {
-        start: new Date(customDateRange.start),
-        end: new Date(customDateRange.end)
+        start: parseISO(customDateRange.start),
+        end: parseISO(customDateRange.end)
       };
     }
 
@@ -31,12 +40,18 @@ const Reports: React.FC = () => {
   // Filter sales by business type and date range
   const filteredSales = useMemo(() => {
     const dateRange = getDateRange();
-    return sales.filter(sale => 
-      (businessType === 'all' || 
-        (businessType === 'telecom' ? sale.businessType?.startsWith('telecom_') : sale.businessType?.startsWith('travel_'))) &&
-      isWithinInterval(sale.date, dateRange)
-    );
-  }, [sales, businessType, timeRange]);
+    return sales.filter(sale => {
+      const matchesBusinessType = businessType === 'all' || 
+        (businessType === 'telecom' ? sale.businessType?.startsWith('telecom_') : sale.businessType?.startsWith('travel_'));
+      
+      const matchesDateRange = isWithinInterval(sale.date, {
+        start: dateRange.start,
+        end: new Date(dateRange.end.getTime() + 24 * 60 * 60 * 1000) // Include end date
+      });
+
+      return matchesBusinessType && matchesDateRange;
+    });
+  }, [sales, businessType, timeRange, customDateRange, isCustomDate, forceUpdate]);
 
   // Prepare data for revenue and profit trends
   const trendsData = useMemo(() => {
@@ -110,6 +125,7 @@ const Reports: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        key={forceUpdate}
       >
         {/* Filters */}
         <motion.div 
