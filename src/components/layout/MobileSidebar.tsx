@@ -5,7 +5,7 @@ import {
   Users, 
   ShoppingCart, 
   FileText, 
-  PhoneCall,
+  PhoneCall, 
   BarChart, 
   Settings, 
   X 
