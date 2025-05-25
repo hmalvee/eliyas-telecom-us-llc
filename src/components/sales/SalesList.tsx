@@ -168,33 +168,207 @@ const OrderDetailsPopup: React.FC<OrderDetailsPopupProps> = ({ sale, onClose, on
 };
 
 const SalesList: React.FC = () => {
-  // ... (previous state declarations and functions remain the same)
+  const { sales, customers, updateSale } = useApp();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [selectedSale, setSelectedSale] = useState<any>(null);
 
-  // ... (rest of the component implementation remains the same)
+  // Filter sales based on search term
+  const filteredSales = useMemo(() => {
+    return sales.filter(sale => {
+      const customer = customers.find(c => c.id === sale.customerId);
+      const searchString = `${customer?.name} ${customer?.phone} ${sale.id}`.toLowerCase();
+      return searchString.includes(searchTerm.toLowerCase());
+    });
+  }, [sales, customers, searchTerm]);
+
+  // Sort filtered sales
+  const sortedSales = useMemo(() => {
+    return [...filteredSales].sort((a, b) => {
+      if (sortConfig.key === 'customerName') {
+        const customerA = customers.find(c => c.id === a.customerId)?.name || '';
+        const customerB = customers.find(c => c.id === b.customerId)?.name || '';
+        return sortConfig.direction === 'asc' 
+          ? customerA.localeCompare(customerB)
+          : customerB.localeCompare(customerA);
+      }
+      
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [filteredSales, sortConfig, customers]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedSales.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedSales = sortedSales.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
 
   return (
     <div className="space-y-6">
-      {/* ... (previous JSX remains the same) ... */}
-      
-      <tbody className="bg-white divide-y divide-gray-200">
-        {paginatedSales.map((sale) => {
-          const customer = customers.find(c => c.id === sale.customerId);
-          
-          return (
-            <tr 
-              key={sale.id} 
-              className="hover:bg-gray-50 cursor-pointer"
-              onClick={() => setSelectedSale(sale)}
-            >
-              {/* ... (existing row content remains the same) ... */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Search sales..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+          />
+          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+        </div>
+        
+        <Link
+          to="/sales/new"
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          New Sale
+        </Link>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('date')}
+              >
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Date
+                  {sortConfig.key === 'date' && (
+                    sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
+                  )}
+                </div>
+              </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('customerName')}
+              >
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-1" />
+                  Customer
+                  {sortConfig.key === 'customerName' && (
+                    sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
+                  )}
+                </div>
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Type
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Amount
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
-          );
-        })}
-      </tbody>
-      
-      {/* ... (rest of the table and pagination remains the same) ... */}
-      
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedSales.map((sale) => {
+              const customer = customers.find(c => c.id === sale.customerId);
+              
+              return (
+                <tr 
+                  key={sale.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedSale(sale)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(sale.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {customer?.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {customer?.phone}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {BUSINESS_TYPE_LABELS[sale.businessType as keyof typeof BUSINESS_TYPE_LABELS]}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatCurrency(sale.amount)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      sale.status === 'paid' ? 'bg-green-100 text-green-800' :
+                      sale.status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end space-x-2">
+                      <button className="text-blue-600 hover:text-blue-900">
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button className="text-red-600 hover:text-red-900">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-gray-700">
+          Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, sortedSales.length)} of {sortedSales.length} results
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
       {selectedSale && (
         <OrderDetailsPopup
           sale={selectedSale}
