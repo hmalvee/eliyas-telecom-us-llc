@@ -59,7 +59,7 @@ interface TravelData {
 
 const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
-  const { customers, customerNumbers, addSale } = useApp();
+  const { customers, customerNumbers: allCustomerNumbers, addSale } = useApp();
   const [businessType, setBusinessType] = useState<'telecom_recharge' | 'telecom_phone' | 'telecom_service' | 'travel_domestic' | 'travel_international'>('telecom_recharge');
   const [isPartialPayment, setIsPartialPayment] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,8 +129,8 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
 
   const customerNumbers = useMemo(() => {
     if (!selectedCustomer) return [];
-    return customerNumbers.filter(n => n.customerId === selectedCustomer.id);
-  }, [selectedCustomer, customerNumbers]);
+    return allCustomerNumbers.filter(n => n.customerId === selectedCustomer.id);
+  }, [selectedCustomer, allCustomerNumbers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
