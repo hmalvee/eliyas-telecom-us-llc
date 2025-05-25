@@ -10,6 +10,14 @@ import {
 } from '../types';
 import { customers as initialCustomers, plans as initialPlans, customerPlans as initialCustomerPlans, sales as initialSales, invoices as initialInvoices, dashboardStats as initialDashboardStats } from '../data/mockData';
 
+interface Payment {
+  saleId: string;
+  amount: number;
+  date: Date;
+  method: 'cash' | 'card' | 'online';
+  notes?: string;
+}
+
 interface AppContextType {
   customers: Customer[];
   plans: Plan[];
@@ -26,6 +34,7 @@ interface AppContextType {
   generateInvoice: (sale: Sale) => Promise<void>;
   addCustomerPlan: (customerPlan: Omit<CustomerPlan, 'id'>) => Promise<void>;
   updateCustomerPlan: (customerPlan: CustomerPlan) => Promise<void>;
+  addPayment: (payment: Payment) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -122,6 +131,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Add a payment to a sale
+  const addPayment = async (payment: Payment) => {
+    try {
+      setSales(prevSales => {
+        return prevSales.map(sale => {
+          if (sale.id === payment.saleId) {
+            const newAmountPaid = sale.amountPaid + payment.amount;
+            const newStatus = newAmountPaid >= sale.amount ? 'paid' : 'partial';
+            
+            return {
+              ...sale,
+              amountPaid: newAmountPaid,
+              status: newStatus
+            };
+          }
+          return sale;
+        });
+      });
+      
+      toast.success('Payment recorded successfully');
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
+      throw error;
+    }
+  };
+
   // Generate an invoice from a sale
   const generateInvoice = async (sale: Sale) => {
     try {
@@ -204,6 +240,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       generateInvoice,
       addCustomerPlan,
       updateCustomerPlan,
+      addPayment,
     }}>
       {children}
     </AppContext.Provider>
