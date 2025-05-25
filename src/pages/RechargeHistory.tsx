@@ -65,11 +65,63 @@ const RechargeHistory: React.FC = () => {
   // Send reminder email
   const sendReminder = async (recharge: any) => {
     try {
-      // Here you would implement the actual email sending logic
-      // For now, we'll just show a success message
+      const type = recharge.isExpiringSoon ? 'expiring' : 'expired';
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-recharge-notification`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customer: recharge.customer,
+          rechargeDetails: {
+            phoneNumber: recharge.number?.phoneNumber || recharge.customer.phone,
+            expiryDate: format(recharge.expiryDate, 'MMM dd, yyyy'),
+            amount: recharge.amount,
+          },
+          type,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
+
+      // Update the UI to show the reminder was sent
+      recharge.reminderSent = true;
+      
       toast.success(`Reminder sent to ${recharge.customer.name}`);
     } catch (error) {
+      console.error('Error sending reminder:', error);
       toast.error('Failed to send reminder');
+    }
+  };
+
+  // Bulk send reminders
+  const sendBulkReminders = async () => {
+    const expiringSoon = recharges.filter(r => r.isExpiringSoon && !r.reminderSent);
+    const recentlyExpired = recharges.filter(r => r.isRecentlyExpired && !r.reminderSent);
+    
+    let successCount = 0;
+    let failureCount = 0;
+
+    const sendPromises = [...expiringSoon, ...recentlyExpired].map(async (recharge) => {
+      try {
+        await sendReminder(recharge);
+        successCount++;
+      } catch (error) {
+        failureCount++;
+      }
+    });
+
+    await Promise.all(sendPromises);
+
+    if (successCount > 0) {
+      toast.success(`Successfully sent ${successCount} reminders`);
+    }
+    if (failureCount > 0) {
+      toast.error(`Failed to send ${failureCount} reminders`);
     }
   };
 
@@ -81,6 +133,16 @@ const RechargeHistory: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-800">Recharge History</h2>
             
             <div className="flex items-center gap-3">
+              {(recharges.some(r => (r.isExpiringSoon || r.isRecentlyExpired) && !r.reminderSent)) && (
+                <button
+                  onClick={sendBulkReminders}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  <Mail size={18} className="mr-2" />
+                  Send All Reminders
+                </button>
+              )}
+              
               <div className="relative flex-1 min-w-[200px]">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search size={18} className="text-gray-400" />
