@@ -13,7 +13,7 @@ import Sales from './pages/Sales';
 import NewSale from './pages/NewSale';
 import SalePayment from './pages/SalePayment';
 import Invoices from './pages/Invoices';
-import Plans from './pages/Plans';
+import RechargeHistory from './pages/RechargeHistory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PrivateRoute from './components/auth/PrivateRoute';
@@ -35,7 +35,7 @@ function App() {
               <Route path="sales/new" element={<NewSale />} />
               <Route path="sales/:id/payment" element={<SalePayment />} />
               <Route path="invoices" element={<Invoices />} />
-              <Route path="plans" element={<Plans />} />
+              <Route path="recharge-history" element={<RechargeHistory />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />

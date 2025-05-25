@@ -5,7 +5,7 @@ import {
   Users, 
   ShoppingCart, 
   FileText, 
-  Package, 
+  PhoneCall,
   BarChart, 
   Settings, 
   X 
@@ -28,7 +28,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Customers', icon: <Users size={20} />, path: '/customers' },
     { name: 'Sales', icon: <ShoppingCart size={20} />, path: '/sales' },
     { name: 'Invoices', icon: <FileText size={20} />, path: '/invoices' },
-    { name: 'Plans', icon: <Package size={20} />, path: '/plans' },
+    { name: 'Recharge History', icon: <PhoneCall size={20} />, path: '/recharge-history' },
     { name: 'Reports', icon: <BarChart size={20} />, path: '/reports' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/settings' },
   ];
