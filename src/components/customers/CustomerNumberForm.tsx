@@ -18,6 +18,7 @@ const CARRIERS = [
   'Metro by T-Mobile',
   'Cricket Wireless',
   'Boost Mobile',
+  'Ultra Mobile',
   'Lyca Mobile',
   'Simple Mobile',
   'Others'
