@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2 } from 'lucide-react';
+import { Search, Plus, Calendar, User, Edit2, DollarSign, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 
 const SalesList: React.FC = () => {
   const { sales, customers, plans, deleteSale } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedBusiness, setSelectedBusiness] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Memoize filtered sales to prevent unnecessary recalculations
   const filteredSales = useMemo(() => {
@@ -33,6 +36,11 @@ const SalesList: React.FC = () => {
   const sortedSales = useMemo(() => {
     return [...filteredSales].sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [filteredSales]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedSales.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedSales = sortedSales.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   
   // Format date
   const formatDate = (date: Date) => {
@@ -100,7 +108,10 @@ const SalesList: React.FC = () => {
                   type="text"
                   placeholder="Search sales..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1); // Reset to first page on search
+                  }}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
@@ -118,7 +129,10 @@ const SalesList: React.FC = () => {
           <div className="mt-4 flex gap-4">
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1); // Reset to first page on filter change
+              }}
               className="rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="all">All Status</option>
@@ -131,7 +145,10 @@ const SalesList: React.FC = () => {
 
             <select
               value={selectedBusiness}
-              onChange={(e) => setSelectedBusiness(e.target.value)}
+              onChange={(e) => {
+                setSelectedBusiness(e.target.value);
+                setCurrentPage(1); // Reset to first page on filter change
+              }}
               className="rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="all">All Business</option>
@@ -169,7 +186,7 @@ const SalesList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedSales.map((sale) => {
+              {paginatedSales.map((sale) => {
                 const customer = customers.find(c => c.id === sale.customerId);
                 const plan = plans.find(p => p.id === sale.planId);
                 
@@ -229,7 +246,7 @@ const SalesList: React.FC = () => {
                 );
               })}
               
-              {sortedSales.length === 0 && (
+              {paginatedSales.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                     {searchQuery 
@@ -241,6 +258,72 @@ const SalesList: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                  <span className="font-medium">
+                    {Math.min(startIndex + ITEMS_PER_PAGE, sortedSales.length)}
+                  </span>{' '}
+                  of <span className="font-medium">{sortedSales.length}</span> results
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <ChevronLeft size={16} />
+                  </button>
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        currentPage === i + 1
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Next</span>
+                    <ChevronRight size={16} />
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
