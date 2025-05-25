@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { ToastContainer } from 'react-toastify';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
@@ -13,7 +13,6 @@ import Sales from './pages/Sales';
 import NewSale from './pages/NewSale';
 import SalePayment from './pages/SalePayment';
 import Invoices from './pages/Invoices';
-import NewInvoice from './pages/NewInvoice';
 import RechargeHistory from './pages/RechargeHistory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -36,18 +35,17 @@ function App() {
               <Route path="sales/new" element={<NewSale />} />
               <Route path="sales/:id/payment" element={<SalePayment />} />
               <Route path="invoices" element={<Invoices />} />
-              <Route path="invoices/new" element={<NewInvoice />} />
               <Route path="recharge-history" element={<RechargeHistory />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-          <Toaster position="top-right" />
+          <ToastContainer position="top-right" autoClose={3000} />
         </Router>
       </AppProvider>
     </AuthProvider>
   );
 }
 
-export default App
+export default App;
