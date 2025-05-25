@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Customer, CustomerNumber } from '../../types';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface SaleFormProps {
   onSuccess?: () => void;
@@ -115,84 +115,49 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
     if (!selectedCustomer) return;
 
     try {
-      let saleData: any = {
-        customerId: selectedCustomer.id,
-        date: new Date(),
-        paymentMethod: paymentData.method,
-        notes: paymentData.notes,
-        businessType
-      };
+      let amount = 0;
+      let notes = paymentData.notes;
 
+      // Set amount based on business type
       switch (businessType) {
         case 'telecom_recharge':
-          if (!selectedNumber && !useOtherNumber) return;
-          saleData = {
-            ...saleData,
-            customerNumberId: selectedNumber?.id,
-            amount: rechargeAmount,
-            notes: `${paymentData.notes}\nNumber: ${useOtherNumber ? otherNumber : selectedNumber?.phoneNumber}`
-          };
+          amount = rechargeAmount;
+          notes = `${notes}\nNumber: ${useOtherNumber ? otherNumber : selectedNumber?.phoneNumber || selectedCustomer.phone}`;
           break;
-
         case 'telecom_phone':
-          saleData = {
-            ...saleData,
-            amount: phoneData.price,
-            notes: `${paymentData.notes}\nBrand: ${phoneData.brand}\nModel: ${phoneData.model}\nIMEI: ${phoneData.imei}`
-          };
+          amount = phoneData.price;
+          notes = `${notes}\nBrand: ${phoneData.brand}\nModel: ${phoneData.model}\nIMEI: ${phoneData.imei}`;
           break;
-
         case 'telecom_service':
-          saleData = {
-            ...saleData,
-            amount: serviceData.cost,
-            notes: `${paymentData.notes}\nService: ${serviceData.type === 'Other' ? serviceData.customType : serviceData.type}\nDescription: ${serviceData.description}`
-          };
+          amount = serviceData.cost;
+          notes = `${notes}\nService: ${serviceData.type === 'Other' ? serviceData.customType : serviceData.type}\nDescription: ${serviceData.description}`;
           break;
-
         case 'travel_domestic':
         case 'travel_international':
-          saleData = {
-            ...saleData,
-            amount: travelData.customerFare,
-            profit: travelData.profit,
-            notes: `${paymentData.notes}\nRoute: ${travelData.route}\nStatus: ${travelData.status}`
-          };
+          amount = travelData.customerFare;
+          notes = `${notes}\nRoute: ${travelData.route}\nStatus: ${travelData.status}`;
           break;
-
-        case 'travel_visa':
-          const visaProfit = travelData.customerFare - travelData.ourFare;
-          saleData = {
-            ...saleData,
-            amount: travelData.customerFare,
-            profit: visaProfit,
-            notes: `${paymentData.notes}\nVisa Processing\nRoute: ${travelData.route}`
-          };
-          break;
-
-        case 'travel_custom':
-          saleData = {
-            ...saleData,
-            amount: travelData.customerFare,
-            profit: travelData.profit,
-            notes: `${paymentData.notes}\nCustom Package\nDetails: ${paymentData.notes}`
-          };
-          break;
-
         case 'telecom_other':
-          saleData = {
-            ...saleData,
-            amount: paymentData.amount,
-            notes: paymentData.notes
-          };
+          amount = paymentData.amount;
           break;
       }
 
-      const { paid, due, status } = calculateAmounts(saleData.amount);
-      saleData.amountPaid = paid;
-      saleData.status = status;
+      const { paid, status } = calculateAmounts(amount);
 
-      const sale = await addSale(saleData);
+      const saleData = {
+        customerId: selectedCustomer.id,
+        customerNumberId: selectedNumber?.id,
+        amount,
+        amountPaid: paid,
+        date: new Date(),
+        paymentMethod: paymentData.method,
+        status,
+        notes,
+        businessType,
+        profit: travelData.profit || 0
+      };
+
+      await addSale(saleData);
       
       if (onSuccess) {
         onSuccess();
@@ -231,9 +196,7 @@ const SaleForm: React.FC<SaleFormProps> = ({ onSuccess }) => {
 
       {/* Customer Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Customer
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Customer</label>
         <div className="relative mt-1">
           <button
             type="button"
