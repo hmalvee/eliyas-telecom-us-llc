@@ -1,4 +1,23 @@
 export interface Settings {
+  dashboard?: {
+    refreshInterval: number;
+    defaultDateRange: '7d' | '30d' | '90d' | '1y';
+    showRevenueChart: boolean;
+    showProfitChart: boolean;
+    showCustomerStats: boolean;
+    showExpiringPlans: boolean;
+    showRecentSales: boolean;
+    alertThresholds: {
+      lowStock: number;
+      expiringPlans: number;
+      paymentOverdue: number;
+    };
+    chartColors: {
+      revenue: string;
+      profit: string;
+      expenses: string;
+    };
+  };
   businessInfo: {
     telecom: {
       name: string;
