@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { 
   Customer, 
@@ -15,8 +15,7 @@ import {
   plans as initialPlans, 
   customerPlans as initialCustomerPlans, 
   sales as initialSales, 
-  invoices as initialInvoices, 
-  dashboardStats as initialDashboardStats,
+  invoices as initialInvoices,
   settings as initialSettings 
 } from '../data/mockData';
 
@@ -64,10 +63,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(initialCustomerPlans);
   const [sales, setSales] = useState<Sale[]>(initialSales);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(initialDashboardStats);
   const [settings, setSettings] = useState<Settings>(initialSettings);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalSales: 0,
+    totalCustomers: 0,
+    activePlans: 0,
+    expiringSoon: 0,
+    revenueToday: 0,
+    revenueTrend: []
+  });
 
-  // Add a new customer
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const totalCustomers = customers.length;
+
+    const activePlans = customerPlans.filter(cp => cp.status === 'active').length;
+
+    const expiringSoon = customerPlans.filter(cp => {
+      if (cp.status !== 'active') return false;
+      const daysUntilExpiry = Math.floor((cp.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
+    }).length;
+
+    const todaySales = sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.toDateString() === today.toDateString();
+    });
+    const revenueToday = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
+
+    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (6 - i));
+      const dailySales = sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.toDateString() === date.toDateString();
+      });
+      return dailySales.reduce((sum, sale) => sum + sale.amount, 0);
+    });
+
+    setDashboardStats({
+      totalSales: sales.length,
+      totalCustomers,
+      activePlans,
+      expiringSoon,
+      revenueToday,
+      revenueTrend
+    });
+  }, [customers, customerPlans, sales]);
+
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate'>) => {
     try {
       const newCustomer: Customer = {
@@ -84,7 +129,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Update an existing customer
   const updateCustomer = async (customer: Customer) => {
     try {
       setCustomers(prev => prev.map(c => c.id === customer.id ? customer : c));
@@ -96,7 +140,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Delete a customer
   const deleteCustomer = async (id: string) => {
     try {
       setCustomers(prev => prev.filter(c => c.id !== id));
@@ -108,7 +151,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Add a new customer number
   const addCustomerNumber = async (number: Omit<CustomerNumber, 'id'>) => {
     try {
       const newNumber: CustomerNumber = {
@@ -124,7 +166,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Delete a customer number
   const deleteCustomerNumber = async (id: string) => {
     try {
       setCustomerNumbers(prev => prev.filter(n => n.id !== id));
@@ -136,7 +177,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Add a new sale
   const addSale = async (saleData: Omit<Sale, 'id' | 'amountPaid' | 'status'>): Promise<Sale> => {
     try {
       const newSale: Sale = {
@@ -148,7 +188,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
       setSales(prev => [...prev, newSale]);
       
-      // Automatically generate invoice for the new sale
       await generateInvoice(newSale);
       
       toast.success('Sale created successfully');
@@ -160,12 +199,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Update a sale
   const updateSale = async (sale: Sale) => {
     try {
       setSales(prev => prev.map(s => s.id === sale.id ? sale : s));
       
-      // Update corresponding invoice
       setInvoices(prev => prev.map(invoice => {
         if (invoice.saleId === sale.id) {
           return {
@@ -185,7 +222,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Delete a sale
   const deleteSale = async (id: string) => {
     try {
       setSales(prev => prev.filter(s => s.id !== id));
@@ -197,7 +233,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Generate an invoice from a sale
   const generateInvoice = async (sale: Sale) => {
     try {
       const customer = customers.find(c => c.id === sale.customerId);
@@ -206,7 +241,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const dueDate = new Date(sale.date);
       dueDate.setDate(dueDate.getDate() + 14);
 
-      // Parse the notes to get the description
       let description = '';
       if (sale.businessType === 'telecom_recharge') {
         const notes = sale.notes.split('\n');
@@ -264,7 +298,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Add a customer plan
   const addCustomerPlan = async (customerPlan: Omit<CustomerPlan, 'id'>) => {
     try {
       const newCustomerPlan: CustomerPlan = {
@@ -280,7 +313,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Update a customer plan
   const updateCustomerPlan = async (customerPlan: CustomerPlan) => {
     try {
       setCustomerPlans(prev => prev.map(cp => cp.id === customerPlan.id ? customerPlan : cp));
@@ -292,7 +324,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Add a payment to a sale
   const addPayment = async (payment: Payment) => {
     try {
       setSales(prevSales => {
@@ -301,7 +332,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             const newAmountPaid = sale.amountPaid + payment.amount;
             const newStatus = newAmountPaid >= sale.amount ? 'paid' : 'partial';
             
-            // Update corresponding invoice
             setInvoices(prev => prev.map(invoice => {
               if (invoice.saleId === sale.id) {
                 return {
@@ -341,7 +371,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Delete an invoice
   const deleteInvoice = async (id: string) => {
     try {
       setInvoices(prev => prev.filter(i => i.id !== id));
@@ -353,12 +382,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Update an invoice
   const updateInvoice = async (invoice: Invoice) => {
     try {
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
       
-      // Update corresponding sale status
       setSales(prev => prev.map(sale => {
         if (sale.id === invoice.saleId) {
           return {
@@ -378,7 +405,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Update settings
   const updateSettings = async (newSettings: Settings) => {
     try {
       setSettings(newSettings);
