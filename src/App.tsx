@@ -21,9 +21,9 @@ import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <AppProvider>
-        <Router>
+    <Router>
+      <AuthProvider>
+        <AppProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
@@ -42,9 +42,9 @@ function App() {
             </Route>
           </Routes>
           <ToastContainer position="top-right" autoClose={3000} />
-        </Router>
-      </AppProvider>
-    </AuthProvider>
+        </AppProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
