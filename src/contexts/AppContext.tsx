@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { toast } from 'react-toastify';
 import { 
   Customer, 
@@ -18,14 +18,6 @@ import {
   invoices as initialInvoices,
   settings as initialSettings 
 } from '../data/mockData';
-
-interface Payment {
-  saleId: string;
-  amount: number;
-  date: Date;
-  method: 'cash' | 'card' | 'online';
-  notes?: string;
-}
 
 interface AppContextType {
   customers: Customer[];
@@ -54,6 +46,14 @@ interface AppContextType {
   updateSettings: (settings: Settings) => Promise<void>;
 }
 
+interface Payment {
+  saleId: string;
+  amount: number;
+  date: Date;
+  method: 'cash' | 'card' | 'online';
+  notes?: string;
+}
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -65,53 +65,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    totalSales: 0,
-    totalCustomers: 0,
-    activePlans: 0,
-    expiringSoon: 0,
-    revenueToday: 0,
-    revenueTrend: []
-  });
-
-  useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const totalCustomers = customers.length;
-
-    const activePlans = customerPlans.filter(cp => cp.status === 'active').length;
-
-    const expiringSoon = customerPlans.filter(cp => {
+    totalSales: sales.length,
+    totalCustomers: customers.length,
+    activePlans: customerPlans.filter(cp => cp.status === 'active').length,
+    expiringSoon: customerPlans.filter(cp => {
       if (cp.status !== 'active') return false;
       const daysUntilExpiry = Math.floor((cp.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-    }).length;
-
-    const todaySales = sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate.toDateString() === today.toDateString();
-    });
-    const revenueToday = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
-
-    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (6 - i));
-      const dailySales = sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.toDateString() === date.toDateString();
-      });
-      return dailySales.reduce((sum, sale) => sum + sale.amount, 0);
-    });
-
-    setDashboardStats({
-      totalSales: sales.length,
-      totalCustomers,
-      activePlans,
-      expiringSoon,
-      revenueToday,
-      revenueTrend
-    });
-  }, [customers, customerPlans, sales]);
+    }).length,
+    revenueToday: sales.filter(sale => {
+      const today = new Date();
+      return sale.date.toDateString() === today.toDateString();
+    }).reduce((sum, sale) => sum + sale.amount, 0),
+    revenueTrend: []
+  });
 
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate'>) => {
     try {
