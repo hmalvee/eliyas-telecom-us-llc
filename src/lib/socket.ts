@@ -1,8 +1,6 @@
 import { io } from 'socket.io-client';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/eliyas';
-
-export const socket = io(MONGODB_URI, {
+export const socket = io({
   autoConnect: true,
   reconnection: true,
   reconnectionAttempts: 5,
