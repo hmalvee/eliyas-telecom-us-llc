@@ -1,80 +1,52 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { io } from 'socket.io-client';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
+import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
+  supabase: SupabaseClient;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const socket = io('http://localhost:3000');
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  const supabase = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY
+  );
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    if (token) {
-      // Verify token with server
-      socket.emit('verifyToken', token, (response: { valid: boolean; user?: User }) => {
-        if (response.valid && response.user) {
-          setUser(response.user);
-        } else {
-          localStorage.removeItem('token');
-        }
-        setLoading(false);
-      });
-    } else {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
-    }
-
-    // Listen for auth state changes
-    socket.on('authStateChange', (userData: User | null) => {
-      setUser(userData);
     });
 
-    return () => {
-      socket.off('authStateChange');
-    };
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    try {
-      socket.emit('signIn', { email, password }, (response: { token: string; user: User }) => {
-        if (response.token && response.user) {
-          localStorage.setItem('token', response.token);
-          setUser(response.user);
-        } else {
-          throw new Error('Invalid credentials');
-        }
-      });
-    } catch (error) {
-      throw error;
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
   };
 
   const signOut = async () => {
-    try {
-      localStorage.removeItem('token');
-      setUser(null);
-      socket.emit('signOut');
-    } catch (error) {
-      throw error;
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, supabase, signIn, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   );
