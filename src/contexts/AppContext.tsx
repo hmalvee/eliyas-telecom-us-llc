@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { socket, subscribeToCollection } from '../lib/socket';
 import { 
   Customer, 
   CustomerNumber,
@@ -10,14 +11,15 @@ import {
   DashboardStats,
   Settings 
 } from '../types';
-import { 
-  customers as initialCustomers, 
-  plans as initialPlans, 
-  customerPlans as initialCustomerPlans, 
-  sales as initialSales, 
-  invoices as initialInvoices,
-  settings as initialSettings 
-} from '../data/mockData';
+import { settings as initialSettings } from '../data/mockData';
+
+interface Payment {
+  saleId: string;
+  amount: number;
+  date: Date;
+  method: 'cash' | 'card' | 'online';
+  notes?: string;
+}
 
 interface AppContextType {
   customers: Customer[];
@@ -46,39 +48,106 @@ interface AppContextType {
   updateSettings: (settings: Settings) => Promise<void>;
 }
 
-interface Payment {
-  saleId: string;
-  amount: number;
-  date: Date;
-  method: 'cash' | 'card' | 'online';
-  notes?: string;
-}
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>([]);
-  const [plans, setPlans] = useState<Plan[]>(initialPlans);
-  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(initialCustomerPlans);
-  const [sales, setSales] = useState<Sale[]>(initialSales);
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    totalSales: sales.length,
-    totalCustomers: customers.length,
-    activePlans: customerPlans.filter(cp => cp.status === 'active').length,
-    expiringSoon: customerPlans.filter(cp => {
+    totalSales: 0,
+    totalCustomers: 0,
+    activePlans: 0,
+    expiringSoon: 0,
+    revenueToday: 0,
+    revenueTrend: []
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/initial-data');
+        const data = await response.json();
+        setCustomers(data.customers);
+        setCustomerNumbers(data.customerNumbers);
+        setPlans(data.plans);
+        setCustomerPlans(data.customerPlans);
+        setSales(data.sales);
+        setInvoices(data.invoices);
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      }
+    };
+
+    fetchData();
+
+    const unsubscribeCustomers = subscribeToCollection('customers', (change) => {
+      if (change.operationType === 'insert') {
+        setCustomers(prev => [...prev, change.fullDocument]);
+      } else if (change.operationType === 'update') {
+        setCustomers(prev => prev.map(c => c.id === change.documentKey._id ? change.fullDocument : c));
+      } else if (change.operationType === 'delete') {
+        setCustomers(prev => prev.filter(c => c.id !== change.documentKey._id));
+      }
+    });
+
+    const unsubscribeCustomerNumbers = subscribeToCollection('customerNumbers', (change) => {
+      if (change.operationType === 'insert') {
+        setCustomerNumbers(prev => [...prev, change.fullDocument]);
+      } else if (change.operationType === 'update') {
+        setCustomerNumbers(prev => prev.map(n => n.id === change.documentKey._id ? change.fullDocument : n));
+      } else if (change.operationType === 'delete') {
+        setCustomerNumbers(prev => prev.filter(n => n.id !== change.documentKey._id));
+      }
+    });
+
+    return () => {
+      unsubscribeCustomers();
+      unsubscribeCustomerNumbers();
+    };
+  }, []);
+
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const activePlans = customerPlans.filter(cp => cp.status === 'active').length;
+
+    const expiringSoon = customerPlans.filter(cp => {
       if (cp.status !== 'active') return false;
       const daysUntilExpiry = Math.floor((cp.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-    }).length,
-    revenueToday: sales.filter(sale => {
-      const today = new Date();
-      return sale.date.toDateString() === today.toDateString();
-    }).reduce((sum, sale) => sum + sale.amount, 0),
-    revenueTrend: []
-  });
+    }).length;
+
+    const todaySales = sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.toDateString() === today.toDateString();
+    });
+    const revenueToday = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
+
+    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (6 - i));
+      const dailySales = sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.toDateString() === date.toDateString();
+      });
+      return dailySales.reduce((sum, sale) => sum + sale.amount, 0);
+    });
+
+    setDashboardStats({
+      totalSales: sales.length,
+      totalCustomers: customers.length,
+      activePlans,
+      expiringSoon,
+      revenueToday,
+      revenueTrend
+    });
+  }, [customers, customerPlans, sales]);
 
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate'>) => {
     try {
