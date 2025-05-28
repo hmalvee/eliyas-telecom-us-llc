@@ -9,7 +9,6 @@ interface StatCardProps {
   change?: number;
   changeText?: string;
   color: 'blue' | 'green' | 'purple' | 'orange';
-  isLoading?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -18,8 +17,7 @@ const StatCard: React.FC<StatCardProps> = ({
   icon,
   change,
   changeText,
-  color,
-  isLoading = false
+  color
 }) => {
   const colorClasses = {
     blue: {
@@ -53,28 +51,6 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   const classes = colorClasses[color];
-
-  if (isLoading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={`${classes.bg} rounded-xl p-5 h-full`}
-      >
-        <div className="animate-pulse space-y-4">
-          <div className="flex items-center justify-between">
-            <div className={`${classes.iconBg} p-2 rounded-lg w-10 h-10`} />
-            <div className="h-6 w-20 bg-gray-200 rounded" />
-          </div>
-          <div className="space-y-2">
-            <div className="h-4 w-24 bg-gray-200 rounded" />
-            <div className="h-8 w-32 bg-gray-200 rounded" />
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
 
   return (
     <motion.div

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useApp } from '../contexts/AppContext';
 import StatCard from '../components/dashboard/StatCard';
 import SalesChart from '../components/dashboard/SalesChart';
@@ -8,7 +8,6 @@ import { Users, Package, BellRing, DollarSign } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const { dashboardStats } = useApp();
-  const [isLoading, setIsLoading] = useState(true);
   
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -18,23 +17,6 @@ const Dashboard: React.FC = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
-
-  // Simulate data loading
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      // Add a small delay to prevent flickering
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setIsLoading(false);
-    };
-
-    loadData();
-
-    // Set up auto-refresh interval (every 5 minutes)
-    const refreshInterval = setInterval(loadData, 5 * 60 * 1000);
-
-    return () => clearInterval(refreshInterval);
-  }, []);
   
   return (
     <div className="space-y-6">
@@ -46,7 +28,6 @@ const Dashboard: React.FC = () => {
           change={8}
           changeText="vs last month"
           color="blue"
-          isLoading={isLoading}
         />
         
         <StatCard 
@@ -56,7 +37,6 @@ const Dashboard: React.FC = () => {
           change={4}
           changeText="vs last month"
           color="green"
-          isLoading={isLoading}
         />
         
         <StatCard 
@@ -64,7 +44,6 @@ const Dashboard: React.FC = () => {
           value={dashboardStats.expiringSoon} 
           icon={<BellRing size={20} />}
           color="orange"
-          isLoading={isLoading}
         />
         
         <StatCard 
@@ -74,7 +53,6 @@ const Dashboard: React.FC = () => {
           change={12}
           changeText="vs yesterday"
           color="purple"
-          isLoading={isLoading}
         />
       </div>
       
