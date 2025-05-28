@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 interface User {
   id: string;
   email: string;
-  name?: string;
+  name: string;
   role: string;
 }
 
@@ -23,29 +24,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in
     const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        // Verify token with your backend
-        try {
-          const response = await fetch('/api/auth/verify', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            localStorage.removeItem('auth_token');
-          }
-        } catch (error) {
-          console.error('Auth verification failed:', error);
-          localStorage.removeItem('auth_token');
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setLoading(false);
+          return;
         }
+
+        const response = await fetch('/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        } else {
+          localStorage.removeItem('token');
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('token');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
@@ -65,20 +69,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Login failed');
       }
 
-      const { user, token } = await response.json();
-      localStorage.setItem('auth_token', token);
-      setUser(user);
+      const { token, user: userData } = await response.json();
+      localStorage.setItem('token', token);
+      setUser(userData);
       navigate('/');
+      toast.success('Welcome back!');
     } catch (error) {
       console.error('Login error:', error);
+      toast.error('Invalid email or password');
       throw error;
     }
   };
 
   const signOut = async () => {
-    localStorage.removeItem('auth_token');
-    setUser(null);
-    navigate('/login');
+    try {
+      localStorage.removeItem('token');
+      setUser(null);
+      navigate('/login');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to log out');
+    }
   };
 
   return (
