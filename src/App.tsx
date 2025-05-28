@@ -1,11 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { AppProvider } from './contexts/AppContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
-// Pages
+import { AppProvider } from './contexts/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
+import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
@@ -14,37 +12,39 @@ import NewCustomer from './pages/NewCustomer';
 import Sales from './pages/Sales';
 import NewSale from './pages/NewSale';
 import SalePayment from './pages/SalePayment';
-import Plans from './pages/Plans';
 import Invoices from './pages/Invoices';
+import RechargeHistory from './pages/RechargeHistory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
-import RechargeHistory from './pages/RechargeHistory';
 import PrivateRoute from './components/auth/PrivateRoute';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<PrivateRoute element={<Dashboard />} />} />
-            <Route path="/customers" element={<PrivateRoute element={<Customers />} />} />
-            <Route path="/customers/new" element={<PrivateRoute element={<NewCustomer />} />} />
-            <Route path="/customers/:id" element={<PrivateRoute element={<CustomerDetails />} />} />
-            <Route path="/sales" element={<PrivateRoute element={<Sales />} />} />
-            <Route path="/sales/new" element={<PrivateRoute element={<NewSale />} />} />
-            <Route path="/sales/:id/payment" element={<PrivateRoute element={<SalePayment />} />} />
-            <Route path="/plans" element={<PrivateRoute element={<Plans />} />} />
-            <Route path="/invoices" element={<PrivateRoute element={<Invoices />} />} />
-            <Route path="/reports" element={<PrivateRoute element={<Reports />} />} />
-            <Route path="/settings" element={<PrivateRoute element={<Settings />} />} />
-            <Route path="/recharge-history" element={<PrivateRoute element={<RechargeHistory />} />} />
+            <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+              <Route index element={<Dashboard />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="customers/new" element={<NewCustomer />} />
+              <Route path="customers/:id" element={<CustomerDetails />} />
+              <Route path="sales" element={<Sales />} />
+              <Route path="sales/new" element={<NewSale />} />
+              <Route path="sales/:id/payment" element={<SalePayment />} />
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="recharge-history" element={<RechargeHistory />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
           </Routes>
           <ToastContainer position="top-right" autoClose={3000} />
-        </AppProvider>
-      </AuthProvider>
-    </Router>
+        </Router>
+      </AppProvider>
+    </AuthProvider>
   );
 }
 
