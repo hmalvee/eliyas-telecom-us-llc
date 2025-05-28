@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -13,6 +14,7 @@ import {
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { signOut } = useAuth();
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -27,6 +29,10 @@ const Sidebar: React.FC = () => {
     { name: 'Reports', icon: <BarChart size={20} />, path: '/reports' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/settings' },
   ];
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-screen">
@@ -57,7 +63,10 @@ const Sidebar: React.FC = () => {
       </nav>
       
       <div className="p-4 border-t border-gray-200">
-        <button className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 w-full">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 w-full"
+        >
           <LogOut size={20} className="text-gray-500" />
           <span className="ml-3 font-medium">Logout</span>
         </button>
