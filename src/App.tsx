@@ -33,7 +33,7 @@ function App() {
             <Route path="recharge-history" element={<RechargeHistory />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/\" replace />} />
           </Route>
         </Routes>
         <ToastContainer position="top-right" autoClose={3000} />
