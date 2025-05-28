@@ -50,13 +50,28 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const loadFromStorage = (key: string) => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data, (key, value) => {
+      if (key.toLowerCase().includes('date')) {
+        return new Date(value);
+      }
+      return value;
+    }) : [];
+  } catch (error) {
+    console.error(`Error loading ${key} from storage:`, error);
+    return [];
+  }
+};
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>(() => loadFromStorage('customers'));
+  const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>(() => loadFromStorage('customerNumbers'));
+  const [plans, setPlans] = useState<Plan[]>(() => loadFromStorage('plans'));
+  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(() => loadFromStorage('customerPlans'));
+  const [sales, setSales] = useState<Sale[]>(() => loadFromStorage('sales'));
+  const [invoices, setInvoices] = useState<Invoice[]>(() => loadFromStorage('invoices'));
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalSales: 0,
@@ -68,16 +83,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   useEffect(() => {
+    localStorage.setItem('customers', JSON.stringify(customers));
+  }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('customerNumbers', JSON.stringify(customerNumbers));
+  }, [customerNumbers]);
+
+  useEffect(() => {
+    localStorage.setItem('plans', JSON.stringify(plans));
+  }, [plans]);
+
+  useEffect(() => {
+    localStorage.setItem('customerPlans', JSON.stringify(customerPlans));
+  }, [customerPlans]);
+
+  useEffect(() => {
+    localStorage.setItem('sales', JSON.stringify(sales));
+  }, [sales]);
+
+  useEffect(() => {
+    localStorage.setItem('invoices', JSON.stringify(invoices));
+  }, [invoices]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/initial-data');
         const data = await response.json();
-        setCustomers(data.customers);
-        setCustomerNumbers(data.customerNumbers);
-        setPlans(data.plans);
-        setCustomerPlans(data.customerPlans);
-        setSales(data.sales);
-        setInvoices(data.invoices);
+        
+        if (customers.length === 0) setCustomers(data.customers);
+        if (customerNumbers.length === 0) setCustomerNumbers(data.customerNumbers);
+        if (plans.length === 0) setPlans(data.plans);
+        if (customerPlans.length === 0) setCustomerPlans(data.customerPlans);
+        if (sales.length === 0) setSales(data.sales);
+        if (invoices.length === 0) setInvoices(data.invoices);
       } catch (error) {
         console.error('Error fetching initial data:', error);
       }
