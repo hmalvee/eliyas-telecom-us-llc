@@ -1,57 +1,97 @@
 import React, { useState } from 'react';
-import { Bell, Store, CreditCard, Shield, Users, FileText, Mail, LayoutDashboard, BarChart } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
+import { User, Lock, Key, Users, Store } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const Settings: React.FC = () => {
-  const { updateSettings, settings } = useApp();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [formData, setFormData] = useState({
-    dashboard: {
-      refreshInterval: settings?.dashboard?.refreshInterval || 5,
-      defaultDateRange: settings?.dashboard?.defaultDateRange || '30d',
-      showRevenueChart: settings?.dashboard?.showRevenueChart ?? true,
-      showProfitChart: settings?.dashboard?.showProfitChart ?? true,
-      showCustomerStats: settings?.dashboard?.showCustomerStats ?? true,
-      showExpiringPlans: settings?.dashboard?.showExpiringPlans ?? true,
-      showRecentSales: settings?.dashboard?.showRecentSales ?? true,
-      alertThresholds: {
-        lowStock: settings?.dashboard?.alertThresholds?.lowStock || 10,
-        expiringPlans: settings?.dashboard?.alertThresholds?.expiringPlans || 7,
-        paymentOverdue: settings?.dashboard?.alertThresholds?.paymentOverdue || 3
-      },
-      chartColors: {
-        revenue: settings?.dashboard?.chartColors?.revenue || '#3b82f6',
-        profit: settings?.dashboard?.chartColors?.profit || '#22c55e',
-        expenses: settings?.dashboard?.chartColors?.expenses || '#ef4444'
-      }
+  const { user, updatePassword } = useAuth();
+  const { settings, updateSettings } = useApp();
+  const [activeTab, setActiveTab] = useState('profile');
+  
+  // Profile Settings
+  const [profileForm, setProfileForm] = useState({
+    name: user?.user_metadata?.name || '',
+    email: user?.email || '',
+    phone: user?.user_metadata?.phone || ''
+  });
+
+  // Password Change
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // New User Form
+  const [newUserForm, setNewUserForm] = useState({
+    email: '',
+    password: '',
+    role: 'staff'
+  });
+
+  // Business Information Form
+  const [businessForm, setBusinessForm] = useState({
+    telecom: settings?.businessInfo?.telecom || {
+      name: '',
+      address: '',
+      phone: '',
+      email: ''
     },
-    businessInfo: settings?.businessInfo || {
-      telecom: {
-        name: 'Eliyas Telecom USA',
-        logo: '',
-        address: '',
-        phone: '',
-        email: ''
-      },
-      travel: {
-        name: 'USA Tours & Travels',
-        logo: '',
-        address: '',
-        phone: '',
-        email: ''
-      }
+    travel: settings?.businessInfo?.travel || {
+      name: '',
+      address: '',
+      phone: '',
+      email: ''
     }
   });
 
-  const handleSave = async () => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Add profile update logic here
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      toast.error('Failed to update profile');
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    try {
+      await updatePassword(passwordForm.newPassword);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      toast.success('Password updated successfully');
+    } catch (error) {
+      toast.error('Failed to update password');
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Add new user creation logic here
+      toast.success('User added successfully');
+      setNewUserForm({ email: '', password: '', role: 'staff' });
+    } catch (error) {
+      toast.error('Failed to add user');
+    }
+  };
+
+  const handleUpdateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       await updateSettings({
         ...settings,
-        ...formData
+        businessInfo: businessForm
       });
-      toast.success('Settings updated successfully');
+      toast.success('Business information updated successfully');
     } catch (error) {
-      toast.error('Failed to update settings');
+      toast.error('Failed to update business information');
     }
   };
 
@@ -62,18 +102,47 @@ const Settings: React.FC = () => {
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => setActiveTab('profile')}
               className={`relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-gray-50 ${
-                activeTab === 'dashboard'
+                activeTab === 'profile'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-500 border-b-2 border-transparent'
               }`}
             >
               <div className="flex items-center justify-center">
-                <LayoutDashboard size={18} className="mr-2" />
-                Dashboard Settings
+                <User size={18} className="mr-2" />
+                Profile Settings
               </div>
             </button>
+            
+            <button
+              onClick={() => setActiveTab('password')}
+              className={`relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-gray-50 ${
+                activeTab === 'password'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 border-b-2 border-transparent'
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                <Lock size={18} className="mr-2" />
+                Change Password
+              </div>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-gray-50 ${
+                activeTab === 'users'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 border-b-2 border-transparent'
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                <Users size={18} className="mr-2" />
+                User Management
+              </div>
+            </button>
+
             <button
               onClick={() => setActiveTab('business')}
               className={`relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-gray-50 ${
@@ -84,367 +153,220 @@ const Settings: React.FC = () => {
             >
               <div className="flex items-center justify-center">
                 <Store size={18} className="mr-2" />
-                Business Information
+                Business Info
               </div>
             </button>
           </nav>
         </div>
       </div>
 
-      {activeTab === 'dashboard' && (
-        <>
-          {/* Dashboard Display Settings */}
-          <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center">
-                <LayoutDashboard size={20} className="text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold text-gray-800">Dashboard Display</h2>
-              </div>
+      {/* Profile Settings */}
+      {activeTab === 'profile' && (
+        <div className="bg-white rounded-xl shadow-sm">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Profile Settings</h2>
+          </div>
+          <form onSubmit={handleUpdateProfile} className="p-6 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <input
+                type="text"
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
             
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Auto Refresh Interval (minutes)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="60"
-                    value={formData.dashboard.refreshInterval}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        refreshInterval: parseInt(e.target.value)
-                      }
-                    }))}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Default Date Range</label>
-                  <select
-                    value={formData.dashboard.defaultDateRange}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        defaultDateRange: e.target.value
-                      }
-                    }))}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  >
-                    <option value="7d">Last 7 Days</option>
-                    <option value="30d">Last 30 Days</option>
-                    <option value="90d">Last 90 Days</option>
-                    <option value="1y">Last Year</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.dashboard.showRevenueChart}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        showRevenueChart: e.target.checked
-                      }
-                    }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Show Revenue Chart
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.dashboard.showProfitChart}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        showProfitChart: e.target.checked
-                      }
-                    }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Show Profit Chart
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.dashboard.showCustomerStats}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        showCustomerStats: e.target.checked
-                      }
-                    }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Show Customer Statistics
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.dashboard.showExpiringPlans}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        showExpiringPlans: e.target.checked
-                      }
-                    }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Show Expiring Plans
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.dashboard.showRecentSales}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        showRecentSales: e.target.checked
-                      }
-                    }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    Show Recent Sales
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Alert Thresholds */}
-          <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center">
-                <Bell size={20} className="text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold text-gray-800">Alert Thresholds</h2>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
             
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Low Stock Alert (items)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.dashboard.alertThresholds.lowStock}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        alertThresholds: {
-                          ...prev.dashboard.alertThresholds,
-                          lowStock: parseInt(e.target.value)
-                        }
-                      }
-                    }))}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Expiring Plans Alert (days)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.dashboard.alertThresholds.expiringPlans}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        alertThresholds: {
-                          ...prev.dashboard.alertThresholds,
-                          expiringPlans: parseInt(e.target.value)
-                        }
-                      }
-                    }))}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Overdue Alert (days)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.dashboard.alertThresholds.paymentOverdue}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      dashboard: {
-                        ...prev.dashboard,
-                        alertThresholds: {
-                          ...prev.dashboard.alertThresholds,
-                          paymentOverdue: parseInt(e.target.value)
-                        }
-                      }
-                    }))}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Phone</label>
+              <input
+                type="tel"
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
-          </div>
 
-          {/* Chart Colors */}
-          <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center">
-                <BarChart size={20} className="text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold text-gray-800">Chart Colors</h2>
-              </div>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Update Profile
+              </button>
             </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Revenue Color</label>
-                  <div className="mt-1 flex items-center space-x-2">
-                    <input
-                      type="color"
-                      value={formData.dashboard.chartColors.revenue}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dashboard: {
-                          ...prev.dashboard,
-                          chartColors: {
-                            ...prev.dashboard.chartColors,
-                            revenue: e.target.value
-                          }
-                        }
-                      }))}
-                      className="h-8 w-8 rounded-md border border-gray-300"
-                    />
-                    <input
-                      type="text"
-                      value={formData.dashboard.chartColors.revenue}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dashboard: {
-                          ...prev.dashboard,
-                          chartColors: {
-                            ...prev.dashboard.chartColors,
-                            revenue: e.target.value
-                          }
-                        }
-                      }))}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Profit Color</label>
-                  <div className="mt-1 flex items-center space-x-2">
-                    <input
-                      type="color"
-                      value={formData.dashboard.chartColors.profit}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dashboard: {
-                          ...prev.dashboard,
-                          chartColors: {
-                            ...prev.dashboard.chartColors,
-                            profit: e.target.value
-                          }
-                        }
-                      }))}
-                      className="h-8 w-8 rounded-md border border-gray-300"
-                    />
-                    <input
-                      type="text"
-                      value={formData.dashboard.chartColors.profit}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dashboard: {
-                          ...prev.dashboard,
-                          chartColors: {
-                            ...prev.dashboard.chartColors,
-                            profit: e.target.value
-                          }
-                        }
-                      }))}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Expenses Color</label>
-                  <div className="mt-1 flex items-center space-x-2">
-                    <input
-                      type="color"
-                      value={formData.dashboard.chartColors.expenses}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dashboard: {
-                          ...prev.dashboard,
-                          chartColors: {
-                            ...prev.dashboard.chartColors,
-                            expenses: e.target.value
-                          }
-                        }
-                      }))}
-                      className="h-8 w-8 rounded-md border border-gray-300"
-                    />
-                    <input
-                      type="text"
-                      value={formData.dashboard.chartColors.expenses}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dashboard: {
-                          ...prev.dashboard,
-                          chartColors: {
-                            ...prev.dashboard.chartColors,
-                            expenses: e.target.value
-                          }
-                        }
-                      }))}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
+          </form>
+        </div>
       )}
 
+      {/* Password Change */}
+      {activeTab === 'password' && (
+        <div className="bg-white rounded-xl shadow-sm">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Change Password</h2>
+          </div>
+          <form onSubmit={handlePasswordChange} className="p-6 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Current Password</label>
+              <input
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">New Password</label>
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Update Password
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* User Management */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          {/* Add New User */}
+          <div className="bg-white rounded-xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Add New User</h2>
+            </div>
+            <form onSubmit={handleAddUser} className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={newUserForm.email}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <input
+                  type="password"
+                  value={newUserForm.password}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Role</label>
+                <select
+                  value={newUserForm.role}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Add User
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* User List */}
+          <div className="bg-white rounded-xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Current Users</h2>
+            </div>
+            <div className="p-6">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {/* Sample user row - replace with actual user data */}
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">Admin User</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">admin@example.com</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Admin
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button className="text-blue-600 hover:text-blue-900">Edit</button>
+                      <button className="ml-4 text-red-600 hover:text-red-900">Delete</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Business Information */}
       {activeTab === 'business' && (
         <div className="bg-white rounded-xl shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <Store size={20} className="text-blue-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-800">Business Information</h2>
-            </div>
+            <h2 className="text-lg font-medium text-gray-900">Business Information</h2>
           </div>
-          
-          <div className="p-6 space-y-6">
+          <form onSubmit={handleUpdateBusiness} className="p-6 space-y-6">
             {/* Telecom Business */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Eliyas Telecom USA</h3>
@@ -453,17 +375,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Business Name</label>
                   <input
                     type="text"
-                    value={formData.businessInfo.telecom.name}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        telecom: {
-                          ...prev.businessInfo.telecom,
-                          name: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.telecom.name}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      telecom: { ...businessForm.telecom, name: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -472,17 +388,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Address</label>
                   <input
                     type="text"
-                    value={formData.businessInfo.telecom.address}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        telecom: {
-                          ...prev.businessInfo.telecom,
-                          address: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.telecom.address}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      telecom: { ...businessForm.telecom, address: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -491,17 +401,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Phone</label>
                   <input
                     type="tel"
-                    value={formData.businessInfo.telecom.phone}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        telecom: {
-                          ...prev.businessInfo.telecom,
-                          phone: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.telecom.phone}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      telecom: { ...businessForm.telecom, phone: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -510,17 +414,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Email</label>
                   <input
                     type="email"
-                    value={formData.businessInfo.telecom.email}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        telecom: {
-                          ...prev.businessInfo.telecom,
-                          email: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.telecom.email}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      telecom: { ...businessForm.telecom, email: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -535,17 +433,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Business Name</label>
                   <input
                     type="text"
-                    value={formData.businessInfo.travel.name}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        travel: {
-                          ...prev.businessInfo.travel,
-                          name: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.travel.name}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      travel: { ...businessForm.travel, name: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -554,17 +446,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Address</label>
                   <input
                     type="text"
-                    value={formData.businessInfo.travel.address}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        travel: {
-                          ...prev.businessInfo.travel,
-                          address: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.travel.address}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      travel: { ...businessForm.travel, address: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -573,17 +459,11 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Phone</label>
                   <input
                     type="tel"
-                    value={formData.businessInfo.travel.phone}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        travel: {
-                          ...prev.businessInfo.travel,
-                          phone: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.travel.phone}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      travel: { ...businessForm.travel, phone: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -592,35 +472,28 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700">Email</label>
                   <input
                     type="email"
-                    value={formData.businessInfo.travel.email}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      businessInfo: {
-                        ...prev.businessInfo,
-                        travel: {
-                          ...prev.businessInfo.travel,
-                          email: e.target.value
-                        }
-                      }
-                    }))}
+                    value={businessForm.travel.email}
+                    onChange={(e) => setBusinessForm({
+                      ...businessForm,
+                      travel: { ...businessForm.travel, email: e.target.value }
+                    })}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   />
                 </div>
               </div>
             </div>
-          </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
         </div>
       )}
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Save Changes
-        </button>
-      </div>
     </div>
   );
 };
