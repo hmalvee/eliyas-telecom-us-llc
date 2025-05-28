@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { toast } from 'react-toastify';
+import { Loader2 } from 'lucide-react';
 
 const SmtpSettings: React.FC = () => {
   const { settings, updateSettings } = useApp();
@@ -14,6 +15,7 @@ const SmtpSettings: React.FC = () => {
     },
     email: settings.email
   });
+  const [isTesting, setIsTesting] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -29,12 +31,30 @@ const SmtpSettings: React.FC = () => {
   };
 
   const handleTestConnection = async () => {
+    setIsTesting(true);
     try {
-      // Add test connection logic here
-      toast.success('SMTP connection successful');
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-smtp`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData.smtp),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+        console.error('SMTP Error:', data.error);
+      }
     } catch (error) {
       console.error('SMTP test failed:', error);
-      toast.error('SMTP connection failed');
+      toast.error('Failed to test SMTP connection');
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -123,9 +143,17 @@ const SmtpSettings: React.FC = () => {
             <button
               type="button"
               onClick={handleTestConnection}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              disabled={isTesting}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              Test Connection
+              {isTesting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin mr-2" />
+                  Testing...
+                </>
+              ) : (
+                'Test Connection'
+              )}
             </button>
             <button
               type="button"
