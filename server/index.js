@@ -20,7 +20,27 @@ mongoose.connect('mongodb://admin:admin123@localhost:27017/eliyas_telecom', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log('Connected to MongoDB'))
+.then(async () => {
+  console.log('Connected to MongoDB');
+  
+  // Create default admin user if it doesn't exist
+  const User = require('./models/User');
+  try {
+    const adminExists = await User.findOne({ email: 'admin@example.com' });
+    if (!adminExists) {
+      const adminUser = new User({
+        email: 'admin@example.com',
+        password: 'admin123',
+        name: 'Admin',
+        role: 'admin'
+      });
+      await adminUser.save();
+      console.log('Default admin user created');
+    }
+  } catch (error) {
+    console.error('Error creating default admin:', error);
+  }
+})
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Load models
@@ -101,29 +121,6 @@ io.on('connection', (socket) => {
 
   socket.on('signOut', () => {
     socket.user = null;
-  });
-
-  // Data events
-  socket.on('addCustomer', async (customerData) => {
-    try {
-      const Customer = mongoose.model('Customer');
-      const customer = new Customer(customerData);
-      await customer.save();
-      io.emit('customerAdded', customer);
-    } catch (error) {
-      socket.emit('error', error.message);
-    }
-  });
-
-  socket.on('addSale', async (saleData) => {
-    try {
-      const Sale = mongoose.model('Sale');
-      const sale = new Sale(saleData);
-      await sale.save();
-      io.emit('saleAdded', sale);
-    } catch (error) {
-      socket.emit('error', error.message);
-    }
   });
 
   socket.on('disconnect', () => {
