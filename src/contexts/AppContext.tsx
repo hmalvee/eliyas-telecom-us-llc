@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { toast } from 'react-toastify';
-import { socket, subscribeToCollection } from '../lib/socket';
 import { 
   Customer, 
   CustomerNumber,
@@ -11,15 +10,14 @@ import {
   DashboardStats,
   Settings 
 } from '../types';
-import { settings as initialSettings } from '../data/mockData';
-
-interface Payment {
-  saleId: string;
-  amount: number;
-  date: Date;
-  method: 'cash' | 'card' | 'online';
-  notes?: string;
-}
+import { 
+  customers as initialCustomers, 
+  plans as initialPlans, 
+  customerPlans as initialCustomerPlans, 
+  sales as initialSales, 
+  invoices as initialInvoices,
+  settings as initialSettings 
+} from '../data/mockData';
 
 interface AppContextType {
   customers: Customer[];
@@ -48,146 +46,39 @@ interface AppContextType {
   updateSettings: (settings: Settings) => Promise<void>;
 }
 
+interface Payment {
+  saleId: string;
+  amount: number;
+  date: Date;
+  method: 'cash' | 'card' | 'online';
+  notes?: string;
+}
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const loadFromStorage = (key: string) => {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data, (key, value) => {
-      if (key.toLowerCase().includes('date')) {
-        return new Date(value);
-      }
-      return value;
-    }) : [];
-  } catch (error) {
-    console.error(`Error loading ${key} from storage:`, error);
-    return [];
-  }
-};
-
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [customers, setCustomers] = useState<Customer[]>(() => loadFromStorage('customers'));
-  const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>(() => loadFromStorage('customerNumbers'));
-  const [plans, setPlans] = useState<Plan[]>(() => loadFromStorage('plans'));
-  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(() => loadFromStorage('customerPlans'));
-  const [sales, setSales] = useState<Sale[]>(() => loadFromStorage('sales'));
-  const [invoices, setInvoices] = useState<Invoice[]>(() => loadFromStorage('invoices'));
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customerNumbers, setCustomerNumbers] = useState<CustomerNumber[]>([]);
+  const [plans, setPlans] = useState<Plan[]>(initialPlans);
+  const [customerPlans, setCustomerPlans] = useState<CustomerPlan[]>(initialCustomerPlans);
+  const [sales, setSales] = useState<Sale[]>(initialSales);
+  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    totalSales: 0,
-    totalCustomers: 0,
-    activePlans: 0,
-    expiringSoon: 0,
-    revenueToday: 0,
-    revenueTrend: []
-  });
-
-  useEffect(() => {
-    localStorage.setItem('customers', JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem('customerNumbers', JSON.stringify(customerNumbers));
-  }, [customerNumbers]);
-
-  useEffect(() => {
-    localStorage.setItem('plans', JSON.stringify(plans));
-  }, [plans]);
-
-  useEffect(() => {
-    localStorage.setItem('customerPlans', JSON.stringify(customerPlans));
-  }, [customerPlans]);
-
-  useEffect(() => {
-    localStorage.setItem('sales', JSON.stringify(sales));
-  }, [sales]);
-
-  useEffect(() => {
-    localStorage.setItem('invoices', JSON.stringify(invoices));
-  }, [invoices]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/initial-data');
-        const data = await response.json();
-        
-        if (customers.length === 0) setCustomers(data.customers);
-        if (customerNumbers.length === 0) setCustomerNumbers(data.customerNumbers);
-        if (plans.length === 0) setPlans(data.plans);
-        if (customerPlans.length === 0) setCustomerPlans(data.customerPlans);
-        if (sales.length === 0) setSales(data.sales);
-        if (invoices.length === 0) setInvoices(data.invoices);
-      } catch (error) {
-        console.error('Error fetching initial data:', error);
-      }
-    };
-
-    fetchData();
-
-    const unsubscribeCustomers = subscribeToCollection('customers', (change) => {
-      if (change.operationType === 'insert') {
-        setCustomers(prev => [...prev, change.fullDocument]);
-      } else if (change.operationType === 'update') {
-        setCustomers(prev => prev.map(c => c.id === change.documentKey._id ? change.fullDocument : c));
-      } else if (change.operationType === 'delete') {
-        setCustomers(prev => prev.filter(c => c.id !== change.documentKey._id));
-      }
-    });
-
-    const unsubscribeCustomerNumbers = subscribeToCollection('customerNumbers', (change) => {
-      if (change.operationType === 'insert') {
-        setCustomerNumbers(prev => [...prev, change.fullDocument]);
-      } else if (change.operationType === 'update') {
-        setCustomerNumbers(prev => prev.map(n => n.id === change.documentKey._id ? change.fullDocument : n));
-      } else if (change.operationType === 'delete') {
-        setCustomerNumbers(prev => prev.filter(n => n.id !== change.documentKey._id));
-      }
-    });
-
-    return () => {
-      unsubscribeCustomers();
-      unsubscribeCustomerNumbers();
-    };
-  }, []);
-
-  useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const activePlans = customerPlans.filter(cp => cp.status === 'active').length;
-
-    const expiringSoon = customerPlans.filter(cp => {
+    totalSales: sales.length,
+    totalCustomers: customers.length,
+    activePlans: customerPlans.filter(cp => cp.status === 'active').length,
+    expiringSoon: customerPlans.filter(cp => {
       if (cp.status !== 'active') return false;
       const daysUntilExpiry = Math.floor((cp.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-    }).length;
-
-    const todaySales = sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate.toDateString() === today.toDateString();
-    });
-    const revenueToday = todaySales.reduce((sum, sale) => sum + sale.amount, 0);
-
-    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (6 - i));
-      const dailySales = sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.toDateString() === date.toDateString();
-      });
-      return dailySales.reduce((sum, sale) => sum + sale.amount, 0);
-    });
-
-    setDashboardStats({
-      totalSales: sales.length,
-      totalCustomers: customers.length,
-      activePlans,
-      expiringSoon,
-      revenueToday,
-      revenueTrend
-    });
-  }, [customers, customerPlans, sales]);
+    }).length,
+    revenueToday: sales.filter(sale => {
+      const today = new Date();
+      return sale.date.toDateString() === today.toDateString();
+    }).reduce((sum, sale) => sum + sale.amount, 0),
+    revenueTrend: []
+  });
 
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate'>) => {
     try {
